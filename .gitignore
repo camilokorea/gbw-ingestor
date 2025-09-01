@@ -1,0 +1,18 @@
+# User-specific files
+*.DS_Store
+*.suo
+*.user
+
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+.vs/
+
+# Secrets - IMPORTANT
+src/Worker/appsettings.json
