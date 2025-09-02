@@ -8,6 +8,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+using Polly;
+using Polly.Extensions.Http;
+
 namespace eBird.Ingestor.Worker;
 
 public class Program
@@ -24,8 +27,9 @@ public class Program
             try
             {
                 var ingestionService = services.GetRequiredService<IIngestionService>();
-                
-                var regionsToProcess = new List<string> { "CO", "US", "ES" }; 
+                var configuration = services.GetRequiredService<IConfiguration>();
+
+                var regionsToProcess = configuration.GetSection("Ingestion:Regions").Get<List<string>>();
                 
                 await ingestionService.ProcessRegionsAsync(regionsToProcess);
             }
@@ -57,8 +61,18 @@ public class Program
                         }));
 
                 services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<EbirdIngestorDbContext>());
-                services.AddHttpClient();
-                services.AddScoped<IEbirdApiClient, EbirdApiClient>();
+
+                services.AddHttpClient<IEbirdApiClient, EbirdApiClient>()
+                    .AddPolicyHandler(GetRetryPolicy());
+
                 services.AddScoped<IIngestionService, IngestionService>();
             });
+
+    static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+    {
+        return HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.NotFound)
+            .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+    }
 }
