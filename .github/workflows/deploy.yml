@@ -28,6 +28,9 @@ jobs:
     - name: Publish application
       run: dotnet publish src/Worker/eBird.Ingestor.Worker.csproj --configuration Release --no-build --output publish
 
+    - name: Rename appsettings.template.json
+      run: mv publish/appsettings.template.json publish/appsettings.json
+
     - name: Archive production artifacts
       uses: actions/upload-artifact@v4
       with:
