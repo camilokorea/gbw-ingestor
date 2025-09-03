@@ -15,6 +15,7 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
     public DbSet<Location> Locations { get; set; }
     public DbSet<Country> Countries { get; set; }
     public DbSet<State> States { get; set; }
+    public DbSet<IngestionQueue> IngestionQueue { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,6 +63,14 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
             entity.HasOne(o => o.Location)
                 .WithMany(l => l.Observations)
                 .HasForeignKey(o => o.LocationId);
+        });
+
+        modelBuilder.Entity<IngestionQueue>(entity =>
+        {
+            entity.Property(e => e.Status)
+                .HasConversion<string>();
+
+            entity.HasIndex(e => e.RegionCode);
         });
     }
 }

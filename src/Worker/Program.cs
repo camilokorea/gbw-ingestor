@@ -3,13 +3,12 @@ using eBird.Ingestor.Application.Contracts.Persistence;
 using eBird.Ingestor.Application.Services;
 using eBird.Ingestor.Infrastructure.Data;
 using eBird.Ingestor.Infrastructure.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-
 using Polly;
 using Polly.Extensions.Http;
+using Microsoft.EntityFrameworkCore;
 
 namespace eBird.Ingestor.Worker;
 
@@ -19,26 +18,30 @@ public class Program
     {
         var host = CreateHostBuilder(args).Build();
 
+        using var scope = host.Services.CreateScope();
+        var services = scope.ServiceProvider;
+
+        if (args.Contains("--seed-queue"))
+        {
+            var seeder = services.GetRequiredService<IQueueSeederService>();
+            await seeder.SeedQueueAsync();
+            return;
+        }
+
         Console.WriteLine("Host creado. El programa se iniciará.");
 
-        using (var scope = host.Services.CreateScope())
+        try
         {
-            var services = scope.ServiceProvider;
-            try
-            {
-                var ingestionService = services.GetRequiredService<IIngestionService>();
-                var configuration = services.GetRequiredService<IConfiguration>();
-
-                var regionsToProcess = configuration.GetSection("Ingestion:Regions").Get<List<string>>();
-                
-                await ingestionService.ProcessRegionsAsync(regionsToProcess);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ha ocurrido un error fatal en la ejecución: {ex.Message}");
-            }
+            var ingestionService = services.GetRequiredService<IIngestionService>();
+            await ingestionService.ProcessQueueAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ha ocurrido un error fatal en la ejecución: {ex.Message}");
         }
     }
+
+    
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
@@ -66,6 +69,7 @@ public class Program
                     .AddPolicyHandler(GetRetryPolicy());
 
                 services.AddScoped<IIngestionService, IngestionService>();
+                services.AddScoped<IQueueSeederService, QueueSeederService>();
             });
 
     static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
@@ -75,4 +79,6 @@ public class Program
             .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.NotFound)
             .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
     }
+
+    
 }

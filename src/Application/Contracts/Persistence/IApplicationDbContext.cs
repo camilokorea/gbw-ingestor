@@ -10,6 +10,7 @@ public interface IApplicationDbContext
     DbSet<Location> Locations { get; }
     DbSet<Country> Countries { get; }
     DbSet<State> States { get; }
+    DbSet<IngestionQueue> IngestionQueue { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -20,21 +20,46 @@ public class IngestionService : IIngestionService
         _logger = logger;
     }
 
-    public async Task ProcessRegionsAsync(IEnumerable<string> regionCodes)
+    public async Task ProcessQueueAsync()
     {
-        _logger.LogInformation("Inicio del proceso de ingestión.");
+        const int batchSize = 10; // Process 10 regions at a time
+        _logger.LogInformation("Inicio del proceso de ingestión desde la cola. Lote de {BatchSize} regiones.", batchSize);
 
-        foreach (var regionCode in regionCodes)
+        // Get a batch of items to process
+        var queueItems = await _dbContext.IngestionQueue
+            .Where(i => i.Status == IngestionStatus.Queued || i.Status == IngestionStatus.Failed)
+            .OrderBy(i => i.LastAttemptUtc) // Prioritize retries
+            .Take(batchSize)
+            .ToListAsync();
+
+        if (!queueItems.Any())
         {
-            _logger.LogInformation("Procesando región: {RegionCode}", regionCode);
+            _logger.LogInformation("No hay regiones en la cola para procesar.");
+            return;
+        }
+
+        // Lock the items
+        foreach (var item in queueItems)
+        {
+            item.Status = IngestionStatus.Processing;
+            item.LastAttemptUtc = DateTime.UtcNow;
+            item.AttemptCount++;
+        }
+        await _dbContext.SaveChangesAsync();
+
+        foreach (var item in queueItems)
+        {
+            _logger.LogInformation("Procesando región: {RegionCode}", item.RegionCode);
 
             try
             {
-                var country = await GetOrCreateCountryAsync(regionCode);
-                var observationsDto = await _apiClient.GetRecentObservationsAsync(regionCode);
+                var country = await GetOrCreateCountryAsync(item.RegionCode);
+                var observationsDto = await _apiClient.GetRecentObservationsAsync(item.RegionCode);
+
                 if (!observationsDto.Any())
                 {
-                    _logger.LogWarning("No se encontraron observaciones para la región: {RegionCode}", regionCode);
+                    _logger.LogWarning("No se encontraron observaciones para la región: {RegionCode}", item.RegionCode);
+                    item.Status = IngestionStatus.Completed; // Or a different status if you want to track this
                     continue;
                 }
 
@@ -43,9 +68,9 @@ public class IngestionService : IIngestionService
                     var location = await GetOrCreateLocationAsync(dto, country);
                     var species = await GetOrCreateSpeciesAsync(dto);
 
-                    var observationExists = await _dbContext.Observations.AnyAsync(o => 
-                        o.LocationId == location.Id && 
-                        o.SpeciesId == species.Id && 
+                    var observationExists = await _dbContext.Observations.AnyAsync(o =>
+                        o.LocationId == location.Id &&
+                        o.SpeciesId == species.Id &&
                         o.ObservationDate == DateTime.Parse(dto.ObsDt));
 
                     if (!observationExists)
@@ -61,14 +86,20 @@ public class IngestionService : IIngestionService
                     }
                 }
 
-                await _dbContext.SaveChangesAsync();
-                _logger.LogInformation("Región {RegionCode} procesada y datos guardados exitosamente.", regionCode);
+                item.Status = IngestionStatus.Completed;
+                _logger.LogInformation("Región {RegionCode} procesada y datos guardados exitosamente.", item.RegionCode);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ocurrió un error procesando la región {RegionCode}", regionCode);
+                _logger.LogError(ex, "Ocurrió un error procesando la región {RegionCode}", item.RegionCode);
+                item.Status = IngestionStatus.Failed;
+            }
+            finally
+            {
+                await _dbContext.SaveChangesAsync();
             }
         }
+
         _logger.LogInformation("Proceso de ingestión finalizado.");
     }
 
