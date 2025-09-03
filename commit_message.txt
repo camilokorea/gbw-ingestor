@@ -1,9 +1,20 @@
-fix: Resolve build errors in Application project
+fix: Resolve EbirdApiClient DI issue and complete architectural refactor
 
-Adds missing NuGet package references to the `eBird.Ingestor.Application.csproj` file to resolve build errors related to `IConfiguration` and its extension methods.
+Addresses the persistent `EbirdApiClient` constructor resolution issue and finalizes the Clean Architecture refactoring by moving EF Core configuration to the Infrastructure layer.
 
-- **`src/Application/eBird.Ingestor.Application.csproj`:**
-  - Adds `Microsoft.Extensions.Configuration.Abstractions` package reference (version 9.0.8) to enable the use of `IConfiguration` interface.
-  - Adds `Microsoft.Extensions.Configuration.Binder` package reference (version 9.0.8) to enable the use of `Get<T>()` extension method for configuration binding.
+- **`src/Infrastructure/DependencyInjection.cs` (New File):**
+  - Introduces `AddInfrastructure` extension method to encapsulate `DbContext` configuration (including `UseSqlServer` and retry logic) and `IApplicationDbContext` registration. This centralizes data access setup within the Infrastructure project.
 
-This commit addresses the compilation failures introduced by the previous refactoring that moved country code configuration to `appsettings.template.json` and utilized `IConfiguration` within the `Application` layer.
+- **`src/Infrastructure/Services/EbirdApiClient.cs`:**
+  - Adds `using Polly;` and `using Polly.Extensions.Http;` directives.
+  - Implements a private `GetRetryPolicy()` method to define the HTTP retry logic.
+  - Modifies `GetRecentObservationsAsync` and `GetLocationDetailsAsync` to explicitly apply the `GetRetryPolicy()` using `policy.ExecuteAsync(() => client.GetAsync(url))`. This moves the Polly policy application from `Program.cs` to the `EbirdApiClient` itself.
+
+- **`src/Worker/Program.cs`:**
+  - Removes direct `AddDbContext` and `AddScoped<IApplicationDbContext>` calls.
+  - Calls `services.AddInfrastructure(context.Configuration);` to register Infrastructure services, adhering to Clean Architecture.
+  - Changes `AddHttpClient<IEbirdApiClient, EbirdApiClient>().AddPolicyHandler(...)` to `services.AddScoped<IEbirdApiClient, EbirdApiClient>();` (after ensuring `services.AddHttpClient();` is present). This resolves the stubborn DI issue by using a standard scoped registration and applying Polly directly within the client.
+  - Adds `using eBird.Ingestor.Infrastructure;` to access the new extension method.
+  - Retains the diagnostic block for `IHttpClientFactory` and `IConfiguration` resolution (will be removed in a subsequent cleanup commit).
+
+This commit ensures the application runs correctly by resolving the `EbirdApiClient` DI problem and fully implements the intended Clean Architecture separation for database configuration.
