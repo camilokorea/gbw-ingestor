@@ -1,0 +1,21 @@
+feat: Implement queue-based ingestion system and architectural fix
+
+Refactors the eBird data ingestion strategy to utilize a persistent, database-backed queue, enhancing robustness, scalability, and adherence to Clean Architecture principles.
+
+- **New Queue System (Strategy 3 Implementation):**
+  - **Domain Layer:** Introduced `IngestionQueue` entity and `IngestionStatus` enum to model queue items.
+  - **Application Layer:**
+    - Added `IQueueSeederService` and `QueueSeederService` to encapsulate the logic for populating the `IngestionQueue` with country codes.
+    - Refactored `IIngestionService` and `IngestionService` to `ProcessQueueAsync`, enabling batch processing of regions directly from the `IngestionQueue`, including retry logic and status updates.
+  - **Infrastructure Layer:**
+    - Updated `EbirdIngestorDbContext` to include `DbSet<IngestionQueue>` and its model configuration.
+    - Generated a new EF Core migration (`AddIngestionQueue`) to create the `IngestionQueue` table in the database.
+
+- **Architectural Compliance & Refinement:**
+  - **Worker Layer (`Program.cs`):**
+    - Eliminated direct dependencies on `Microsoft.EntityFrameworkCore` and `eBird.Ingestor.Domain` models, ensuring the `Worker` project only interacts with the `Application` layer's interfaces.
+    - Integrated `IQueueSeederService` for queue population, triggered by the `--seed-queue` command-line argument.
+    - The main execution flow now correctly invokes `IIngestionService.ProcessQueueAsync()`.
+    - Corrected and restored essential `using` directives that were previously removed, resolving compilation errors.
+
+This commit significantly improves the application's resilience, maintainability, and scalability by decoupling the ingestion process from direct configuration and centralizing queue management.
