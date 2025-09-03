@@ -3,7 +3,8 @@ name: Deploy .NET Worker to Linode
 on:
   push:
     branches:
-      - main # Trigger on pushes to the main branch
+      - main
+  workflow_dispatch: # <--- ADD THIS LINE
 
 jobs:
   build:
@@ -22,6 +23,9 @@ jobs:
       run: dotnet restore
 
     - name: Build application
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Publish application
       run: dotnet publish src/Worker/eBird.Ingestor.Worker.csproj --configuration Release --no-build --output publish
 
     - name: Archive production artifacts
@@ -49,7 +53,7 @@ jobs:
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
           # Define the deployment path on your Linode server
-          DEPLOY_PATH="/APPS/ebird-ingestor" # <--- CHANGED THIS LINE
+          DEPLOY_PATH="/APPS/ebird-ingestor"
 
           # Create deployment directory if it doesn't exist
           mkdir -p $DEPLOY_PATH
