@@ -2,6 +2,8 @@ using System.Text.Json;
 using eBird.Ingestor.Application.Contracts;
 using eBird.Ingestor.Application.Contracts.Dtos;
 using Microsoft.Extensions.Configuration;
+using Polly;
+using Polly.Extensions.Http;
 
 namespace eBird.Ingestor.Infrastructure.Services;
 
@@ -29,7 +31,8 @@ public class EbirdApiClient : IEbirdApiClient
 
         var url = $"https://api.ebird.org/v2/data/obs/{regionCode}/recent";
 
-        var response = await client.GetAsync(url);
+        var policy = GetRetryPolicy();
+        var response = await policy.ExecuteAsync(() => client.GetAsync(url));
 
         response.EnsureSuccessStatusCode();
 
@@ -46,7 +49,8 @@ public class EbirdApiClient : IEbirdApiClient
         client.DefaultRequestHeaders.Add("X-eBirdApiToken", apiKey);
 
         var url = $"https://api.ebird.org/v2/ref/location/info/{locId}";
-        var response = await client.GetAsync(url);
+        var policy = GetRetryPolicy();
+        var response = await policy.ExecuteAsync(() => client.GetAsync(url));
 
         response.EnsureSuccessStatusCode();
 
@@ -54,5 +58,13 @@ public class EbirdApiClient : IEbirdApiClient
         var details = JsonSerializer.Deserialize<EbirdLocationDetailsDto>(json);
 
         return details ?? new EbirdLocationDetailsDto();
+    }
+
+    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+    {
+        return HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.NotFound)
+            .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
     }
 }

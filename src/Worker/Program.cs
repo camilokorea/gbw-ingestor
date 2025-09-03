@@ -8,7 +8,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Polly;
 using Polly.Extensions.Http;
-using Microsoft.EntityFrameworkCore;
+
+
+using eBird.Ingestor.Infrastructure;
 
 namespace eBird.Ingestor.Worker;
 
@@ -32,6 +34,29 @@ public class Program
 
         try
         {
+            // --- Diagnostic Block Start ---
+            var httpClientFactory = services.GetService<IHttpClientFactory>();
+            var configuration = services.GetService<IConfiguration>();
+
+            if (httpClientFactory == null)
+            {
+                Console.WriteLine("ERROR: IHttpClientFactory could not be resolved.");
+            }
+            else
+            {
+                Console.WriteLine("IHttpClientFactory resolved successfully.");
+            }
+
+            if (configuration == null)
+            {
+                Console.WriteLine("ERROR: IConfiguration could not be resolved.");
+            }
+            else
+            {
+                Console.WriteLine("IConfiguration resolved successfully.");
+            }
+            // --- Diagnostic Block End ---
+
             var ingestionService = services.GetRequiredService<IIngestionService>();
             await ingestionService.ProcessQueueAsync();
         }
@@ -52,21 +77,10 @@ public class Program
             })
             .ConfigureServices((context, services) =>
             {
-                services.AddDbContext<EbirdIngestorDbContext>(options =>
-                    options.UseSqlServer(
-                        context.Configuration.GetConnectionString("DefaultConnection"),
-                        sqlServerOptionsAction: sqlOptions =>
-                        {
-                            sqlOptions.EnableRetryOnFailure(
-                                maxRetryCount: 5,
-                                maxRetryDelay: TimeSpan.FromSeconds(30),
-                                errorNumbersToAdd: null);
-                        }));
+                services.AddInfrastructure(context.Configuration);
 
-                services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<EbirdIngestorDbContext>());
-
-                services.AddHttpClient<IEbirdApiClient, EbirdApiClient>()
-                    .AddPolicyHandler(GetRetryPolicy());
+                services.AddHttpClient(); // Keep this to register IHttpClientFactory
+                services.AddScoped<IEbirdApiClient, EbirdApiClient>();
 
                 services.AddScoped<IIngestionService, IngestionService>();
                 services.AddScoped<IQueueSeederService, QueueSeederService>();

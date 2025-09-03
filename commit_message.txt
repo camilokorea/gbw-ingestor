@@ -1,14 +1,9 @@
-refactor: Make country codes configurable in appsettings.template.json
+fix: Resolve build errors in Application project
 
-Moves the hardcoded list of country codes from `QueueSeederService.cs` to `appsettings.template.json` under a new `CountriesToSeed` section.
+Adds missing NuGet package references to the `eBird.Ingestor.Application.csproj` file to resolve build errors related to `IConfiguration` and its extension methods.
 
-- **`src/Worker/appsettings.template.json`:**
-  - Adds a new `CountriesToSeed` array containing the full list of country codes.
-  - Removes the no-longer-needed `Ingestion:Regions` section.
+- **`src/Application/eBird.Ingestor.Application.csproj`:**
+  - Adds `Microsoft.Extensions.Configuration.Abstractions` package reference (version 9.0.8) to enable the use of `IConfiguration` interface.
+  - Adds `Microsoft.Extensions.Configuration.Binder` package reference (version 9.0.8) to enable the use of `Get<T>()` extension method for configuration binding.
 
-- **`src/Application/Services/QueueSeederService.cs`:**
-  - Modifies the constructor to inject `IConfiguration`.
-  - Updates the `SeedQueueAsync` method to retrieve the list of country codes from `_configuration.GetSection("CountriesToSeed")`.
-  - Removes the static `GetAllCountryCodes()` method, as the data is now externalized.
-
-This change improves flexibility, allowing the list of countries to be managed and updated without requiring code recompilation and redeployment.
+This commit addresses the compilation failures introduced by the previous refactoring that moved country code configuration to `appsettings.template.json` and utilized `IConfiguration` within the `Application` layer.
