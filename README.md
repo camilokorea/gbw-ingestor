@@ -83,3 +83,28 @@ Follow these steps to set up and run the project in your local environment.
         dotnet run --project src/Worker
         ```
     -   The program will begin fetching and saving data for the regions defined in `Program.cs`.
+
+## Deployment
+
+This project uses a GitHub Actions workflow for continuous integration and deployment. The process is automatically triggered on every push to the `main` branch.
+
+The workflow is defined in `.github/workflows/deploy.yml` and consists of two main jobs:
+
+### 1. Build Job
+
+This job is responsible for building and preparing the application for deployment.
+
+- **Checkout & Setup**: Checks out the source code and sets up the specified .NET SDK.
+- **Build & Publish**: Restores dependencies, builds the solution, and publishes the worker project in `Release` mode.
+- **Configure**: Renames `appsettings.template.json` to `appsettings.json` and injects secrets (database credentials, API keys) into the configuration file.
+- **Archive**: Uploads the published application as a build artifact, which will be used by the deploy job.
+
+### 2. Deploy Job
+
+This job runs after the build job succeeds and is responsible for deploying the application to a Linode server.
+
+- **Download Artifact**: Downloads the application artifact created in the build job.
+- **Copy Files**: Uses `scp` to securely copy the application files to the target directory (`/APPS/ebird-ingestor`) on the Linode server.
+- **Restart Service**: Uses `ssh` to connect to the server and execute a script that:
+    - Sets the correct file ownership and permissions.
+    - Restarts and enables the `ebird-ingestor.service` systemd service, ensuring the new version of the application is running.
