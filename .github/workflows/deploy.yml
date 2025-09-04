@@ -69,7 +69,7 @@ jobs:
         source: "app/."
         target: "/APPS/ebird-ingestor"
 
-    - name: Restart service on Linode
+    - name: Set Permissions and Restart Service
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.LINODE_HOST }}
@@ -77,6 +77,8 @@ jobs:
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
           DEPLOY_PATH="/APPS/ebird-ingestor"
+          # Fix ownership
+          sudo chown -R root:root $DEPLOY_PATH
           # Set permissions
           sudo chmod -R 755 $DEPLOY_PATH
           # Restart the service
