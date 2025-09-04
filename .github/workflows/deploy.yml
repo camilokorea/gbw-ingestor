@@ -31,6 +31,18 @@ jobs:
     - name: Rename appsettings.template.json
       run: mv publish/appsettings.template.json publish/appsettings.json
 
+    - name: Update appsettings.json with secrets
+      env:
+        DB_SERVER: ${{ secrets.DB_SERVER }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        EBIRD_API_KEY: ${{ secrets.EBIRD_API_KEY }}
+      run: |
+        sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/appsettings.json
+        sed -i "s#YOUR_USER#$DB_USER#g" publish/appsettings.json
+        sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g" publish/appsettings.json
+        sed -i "s#YOUR_EBIRD_API_KEY#$EBIRD_API_KEY#g" publish/appsettings.json
+
     - name: Archive production artifacts
       uses: actions/upload-artifact@v4
       with:
