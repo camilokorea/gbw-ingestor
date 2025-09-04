@@ -48,31 +48,25 @@ jobs:
         name: worker-app
         path: ./app
 
-    - name: Deploy to Linode
+    - name: Copy application to Linode
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        source: "app/*"
+        target: "/APPS/ebird-ingestor"
+
+    - name: Restart service on Linode
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.LINODE_HOST }}
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
-          # Define the deployment path on your Linode server
           DEPLOY_PATH="/APPS/ebird-ingestor"
-
-          # Create deployment directory if it doesn't exist
-          mkdir -p $DEPLOY_PATH
-
-          # Stop the systemd service if it's running
-          sudo systemctl stop ebird-ingestor.service || true
-
-          # Remove old files (optional, but good for clean deployments)
-          rm -rf $DEPLOY_PATH/*
-
-          # Copy new files (the artifact is downloaded to ./app, so copy from there)
-          cp -r ./app/* $DEPLOY_PATH/
-
-          # Set correct permissions (optional, but good practice)
+          # Set permissions
           sudo chmod -R 755 $DEPLOY_PATH
-
-          # Restart the systemd service
-          sudo systemctl start ebird-ingestor.service
-          sudo systemctl enable ebird-ingestor.service # Ensure it starts on boot
+          # Restart the service
+          sudo systemctl restart ebird-ingestor.service
+          sudo systemctl enable ebird-ingestor.service
