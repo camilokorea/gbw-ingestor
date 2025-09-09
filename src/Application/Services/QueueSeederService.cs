@@ -46,4 +46,18 @@ public class QueueSeederService : IQueueSeederService
 
         _logger.LogInformation("Queue seeded successfully with {Count} regions.", allCountryCodes.Count);
     }
+
+    public async Task<bool> CheckQueueCompletedAsync()
+    {
+        _logger.LogInformation("Checking Queue is already processed...");
+
+        var queueItems = await _dbContext.IngestionQueue
+            .Where(i => i.Status == IngestionStatus.Queued || i.Status == IngestionStatus.Failed)
+            .ToListAsync();
+
+        if (!queueItems.Any())
+            return false;
+        else
+            return true;
+    }
 }

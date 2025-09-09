@@ -22,10 +22,10 @@ public class Program
 
         using var scope = host.Services.CreateScope();
         var services = scope.ServiceProvider;
+        var seeder = services.GetRequiredService<IQueueSeederService>();
 
         if (args.Contains("--seed-queue"))
         {
-            var seeder = services.GetRequiredService<IQueueSeederService>();
             await seeder.SeedQueueAsync();
             return;
         }
@@ -56,8 +56,10 @@ public class Program
                 Console.WriteLine("IConfiguration resolved successfully.");
             }
             // --- Diagnostic Block End ---
-
+            var processedQueue = await seeder.CheckQueueCompletedAsync();
             var ingestionService = services.GetRequiredService<IIngestionService>();
+            if (!processedQueue)
+                await seeder.SeedQueueAsync();
             await ingestionService.ProcessQueueAsync();
         }
         catch (Exception ex)
@@ -66,7 +68,7 @@ public class Program
         }
     }
 
-    
+
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
@@ -94,5 +96,5 @@ public class Program
             .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
     }
 
-    
+
 }
