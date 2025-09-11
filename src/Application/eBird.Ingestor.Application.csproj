@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Domain\eBird.Ingestor.Domain.csproj" />
+    <ProjectReference Include="..\Sound.Ingestor.Domain\Sound.Ingestor.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

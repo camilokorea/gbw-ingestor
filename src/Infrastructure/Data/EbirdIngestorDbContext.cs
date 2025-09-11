@@ -1,6 +1,7 @@
 using eBird.Ingestor.Application.Contracts.Persistence;
 using eBird.Ingestor.Domain;
 using Microsoft.EntityFrameworkCore;
+using Sound.Ingestor.Domain;
 
 namespace eBird.Ingestor.Infrastructure.Data;
 
@@ -16,6 +17,7 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
     public DbSet<Country> Countries { get; set; }
     public DbSet<State> States { get; set; }
     public DbSet<IngestionQueue> IngestionQueue { get; set; }
+    public DbSet<SoundSignature> SoundSignatures { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -71,6 +73,15 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
                 .HasConversion<string>();
 
             entity.HasIndex(e => e.RegionCode);
+        });
+
+        modelBuilder.Entity<SoundSignature>(entity =>
+        {
+            entity.HasIndex(s => s.XenoCantoId).IsUnique();
+
+            entity.HasOne(s => s.Species)
+                .WithMany()
+                .HasForeignKey(s => s.SpeciesId);
         });
     }
 }

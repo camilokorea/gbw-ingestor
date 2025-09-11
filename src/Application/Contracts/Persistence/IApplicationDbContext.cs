@@ -11,6 +11,7 @@ public interface IApplicationDbContext
     DbSet<Country> Countries { get; }
     DbSet<State> States { get; }
     DbSet<IngestionQueue> IngestionQueue { get; }
+    DbSet<Sound.Ingestor.Domain.SoundSignature> SoundSignatures { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

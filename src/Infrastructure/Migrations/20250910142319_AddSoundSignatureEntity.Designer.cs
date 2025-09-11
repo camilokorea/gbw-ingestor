@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using eBird.Ingestor.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using eBird.Ingestor.Infrastructure.Data;
 namespace eBird.Ingestor.Infrastructure.Migrations
 {
     [DbContext(typeof(EbirdIngestorDbContext))]
-    partial class EbirdIngestorDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250910142319_AddSoundSignatureEntity")]
+    partial class AddSoundSignatureEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
