@@ -1,10 +1,10 @@
-name: Deploy .NET Worker to Linode
+name: Deploy .NET Workers to Linode
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch: # <--- ADD THIS LINE
+  workflow_dispatch:
 
 jobs:
   build:
@@ -17,7 +17,7 @@ jobs:
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x' # Specify the .NET SDK version
+        dotnet-version: '9.0.x'
 
     - name: Restore dependencies
       run: dotnet restore
@@ -25,8 +25,11 @@ jobs:
     - name: Build application
       run: dotnet build --configuration Release --no-restore
 
-    - name: Publish application
+    - name: Publish eBird Ingestor
       run: dotnet publish src/Worker/eBird.Ingestor.Worker.csproj --configuration Release --no-build --output publish
+
+    - name: Publish Sound Ingestor
+      run: dotnet publish src/Sound.Ingestor.Worker/Sound.Ingestor.Worker.csproj --configuration Release --no-build --output publish
 
     - name: Rename appsettings.template.json
       run: mv publish/appsettings.template.json publish/appsettings.json
@@ -50,7 +53,7 @@ jobs:
         path: publish
 
   deploy:
-    needs: build # This job depends on the 'build' job completing successfully
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
@@ -67,20 +70,26 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/ebird-ingestor"
+        target: "/APPS/ebird-ingestor/app"
 
-    - name: Set Permissions and Restart Service
+    - name: Set Permissions and Restart Services
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.LINODE_HOST }}
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
-          DEPLOY_PATH="/APPS/ebird-ingestor"
+          DEPLOY_PATH="/APPS/ebird-ingestor/app"
+          
           # Fix ownership
           sudo chown -R root:root $DEPLOY_PATH
+          
           # Set permissions
           sudo chmod -R 755 $DEPLOY_PATH
-          # Restart the service
+          
+          # Restart and enable services
           sudo systemctl restart ebird-ingestor.service
           sudo systemctl enable ebird-ingestor.service
+          
+          sudo systemctl restart sound-ingestor.service
+          sudo systemctl enable sound-ingestor.service
