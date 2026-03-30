@@ -24,6 +24,9 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
     public DbSet<FlickrPhotoLocation> FlickrPhotoLocations { get; set; }
     public DbSet<SpeciesPhoto> SpeciesPhotos { get; set; }
 
+    // Color data
+    public DbSet<SpeciesColor> SpeciesColors { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -114,6 +117,17 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
             entity.HasOne(sp => sp.FlickrPhoto)
                 .WithMany(p => p.SpeciesPhotos)
                 .HasForeignKey(sp => sp.FlickrPhotoId);
+        });
+
+        // ── SpeciesColor ───────────────────────────────────────────────────
+
+        modelBuilder.Entity<SpeciesColor>(entity =>
+        {
+            entity.HasIndex(sc => new { sc.SpeciesId, sc.Rank }).IsUnique();
+
+            entity.HasOne(sc => sc.Species)
+                .WithMany()
+                .HasForeignKey(sc => sc.SpeciesId);
         });
     }
 }

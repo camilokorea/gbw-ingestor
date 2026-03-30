@@ -344,6 +344,44 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.ToTable("Species");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesColor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<byte>("B")
+                        .HasColumnType("tinyint");
+
+                    b.Property<double>("CoveragePercent")
+                        .HasColumnType("float");
+
+                    b.Property<byte>("G")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("HexColor")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte>("R")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SpeciesId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpeciesId", "Rank")
+                        .IsUnique();
+
+                    b.ToTable("SpeciesColors");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesPhoto", b =>
                 {
                     b.Property<int>("SpeciesId")
@@ -443,6 +481,17 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Location");
+
+                    b.Navigation("Species");
+                });
+
+            modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesColor", b =>
+                {
+                    b.HasOne("eBird.Ingestor.Domain.Species", "Species")
+                        .WithMany()
+                        .HasForeignKey("SpeciesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Species");
                 });
