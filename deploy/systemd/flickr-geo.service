@@ -1,0 +1,16 @@
+[Unit]
+Description=GBW Flickr Geo Worker — backfills GPS geolocation data for Flickr photos
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/APPS/flickr-geo/app
+ExecStart=/usr/bin/dotnet /APPS/flickr-geo/app/Flickr.Geo.Worker.dll
+Restart=no
+User=root
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=flickr-geo
+
+[Install]
+WantedBy=multi-user.target

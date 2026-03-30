@@ -80,6 +80,150 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.ToTable("Countries");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.FlickrPhoto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("LargeSquareThumbnailUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LargeUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Medium640Url")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Medium800Url")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MediumUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OwnerName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("PhotoId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Small320Url")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SmallUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SquareThumbnailUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WebUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PhotoId")
+                        .IsUnique();
+
+                    b.ToTable("FlickrPhotos");
+                });
+
+            modelBuilder.Entity("eBird.Ingestor.Domain.FlickrPhotoLocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("Accuracy")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Context")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CountryName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CountryPlaceId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("CountryWoeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CountyName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CountyPlaceId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("CountyWoeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("FlickrPhotoId")
+                        .HasColumnType("int");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<string>("LocalityName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LocalityPlaceId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("LocalityWoeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("float");
+
+                    b.Property<string>("PlaceId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RegionName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RegionPlaceId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("RegionWoeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("WoeId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FlickrPhotoId")
+                        .IsUnique();
+
+                    b.ToTable("FlickrPhotoLocations");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.IngestionQueue", b =>
                 {
                     b.Property<int>("Id")
@@ -200,6 +344,21 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.ToTable("Species");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesPhoto", b =>
+                {
+                    b.Property<int>("SpeciesId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FlickrPhotoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("SpeciesId", "FlickrPhotoId");
+
+                    b.HasIndex("FlickrPhotoId");
+
+                    b.ToTable("SpeciesPhotos");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.State", b =>
                 {
                     b.Property<int>("Id")
@@ -241,6 +400,17 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.Navigation("Species");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.FlickrPhotoLocation", b =>
+                {
+                    b.HasOne("eBird.Ingestor.Domain.FlickrPhoto", "Photo")
+                        .WithOne("Location")
+                        .HasForeignKey("eBird.Ingestor.Domain.FlickrPhotoLocation", "FlickrPhotoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Photo");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.Location", b =>
                 {
                     b.HasOne("eBird.Ingestor.Domain.Country", "Country")
@@ -277,6 +447,25 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.Navigation("Species");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesPhoto", b =>
+                {
+                    b.HasOne("eBird.Ingestor.Domain.FlickrPhoto", "FlickrPhoto")
+                        .WithMany("SpeciesPhotos")
+                        .HasForeignKey("FlickrPhotoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("eBird.Ingestor.Domain.Species", "Species")
+                        .WithMany()
+                        .HasForeignKey("SpeciesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FlickrPhoto");
+
+                    b.Navigation("Species");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.State", b =>
                 {
                     b.HasOne("eBird.Ingestor.Domain.Country", "Country")
@@ -293,6 +482,13 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.Navigation("Locations");
 
                     b.Navigation("States");
+                });
+
+            modelBuilder.Entity("eBird.Ingestor.Domain.FlickrPhoto", b =>
+                {
+                    b.Navigation("Location");
+
+                    b.Navigation("SpeciesPhotos");
                 });
 
             modelBuilder.Entity("eBird.Ingestor.Domain.Location", b =>

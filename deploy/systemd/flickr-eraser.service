@@ -1,0 +1,16 @@
+[Unit]
+Description=GBW Flickr Eraser Worker — validates photo URLs and hard-deletes dead photos from DB
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/APPS/flickr-eraser/app
+ExecStart=/usr/bin/dotnet /APPS/flickr-eraser/app/Flickr.Eraser.Worker.dll
+Restart=no
+User=root
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=flickr-eraser
+
+[Install]
+WantedBy=multi-user.target

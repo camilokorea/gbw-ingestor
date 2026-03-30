@@ -7,6 +7,10 @@ on:
   workflow_dispatch:
 
 jobs:
+
+  # ─────────────────────────────────────────────────────────────
+  # BUILD — compile & publish all workers
+  # ─────────────────────────────────────────────────────────────
   build:
     runs-on: ubuntu-latest
 
@@ -22,48 +26,140 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
-    - name: Build application
+    - name: Build solution
       run: dotnet build --configuration Release --no-restore
 
+    # ── eBird Ingestor ──────────────────────────────────────────
     - name: Publish eBird Ingestor
-      run: dotnet publish src/Worker/eBird.Ingestor.Worker.csproj --configuration Release --no-build --output publish
+      run: dotnet publish src/Worker/eBird.Ingestor.Worker.csproj --configuration Release --no-build --output publish/ebird
 
     - name: Publish Sound Ingestor
-      run: dotnet publish src/Sound.Ingestor.Worker/Sound.Ingestor.Worker.csproj --configuration Release --no-build --output publish
+      run: dotnet publish src/Sound.Ingestor.Worker/Sound.Ingestor.Worker.csproj --configuration Release --no-build --output publish/ebird
 
-    - name: Rename appsettings.template.json
-      run: mv publish/appsettings.template.json publish/appsettings.json
+    - name: Rename eBird appsettings template
+      run: mv publish/ebird/appsettings.template.json publish/ebird/appsettings.json
 
-    - name: Update appsettings.json with secrets
+    - name: Inject secrets into eBird appsettings
       env:
         DB_SERVER: ${{ secrets.DB_SERVER }}
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         EBIRD_API_KEY: ${{ secrets.EBIRD_API_KEY }}
       run: |
-        sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/appsettings.json
-        sed -i "s#YOUR_USER#$DB_USER#g" publish/appsettings.json
-        sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g" publish/appsettings.json
-        sed -i "s#YOUR_EBIRD_API_KEY#$EBIRD_API_KEY#g" publish/appsettings.json
+        sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/ebird/appsettings.json
+        sed -i "s#YOUR_USER#$DB_USER#g"             publish/ebird/appsettings.json
+        sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"     publish/ebird/appsettings.json
+        sed -i "s#YOUR_EBIRD_API_KEY#$EBIRD_API_KEY#g" publish/ebird/appsettings.json
 
-    - name: Archive production artifacts
+    - name: Upload eBird artifact
       uses: actions/upload-artifact@v4
       with:
-        name: worker-app
-        path: publish
+        name: ebird-app
+        path: publish/ebird
 
-  deploy:
+    # ── Flickr Synch ────────────────────────────────────────────
+    - name: Publish Flickr Synch
+      run: dotnet publish src/Flickr.Synch.Worker/Flickr.Synch.Worker.csproj --configuration Release --no-build --output publish/flickr-synch
+
+    - name: Inject secrets into Flickr Synch appsettings
+      env:
+        DB_SERVER: ${{ secrets.DB_SERVER }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        FLICKR_API_KEY: ${{ secrets.FLICKR_API_KEY }}
+        FLICKR_API_SECRET: ${{ secrets.FLICKR_API_SECRET }}
+      run: |
+        sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g"       publish/flickr-synch/appsettings.json
+        sed -i "s#YOUR_USER#$DB_USER#g"                    publish/flickr-synch/appsettings.json
+        sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"            publish/flickr-synch/appsettings.json
+        sed -i "s#YOUR_FLICKR_API_KEY#$FLICKR_API_KEY#g"  publish/flickr-synch/appsettings.json
+        sed -i "s#YOUR_FLICKR_API_SECRET#$FLICKR_API_SECRET#g" publish/flickr-synch/appsettings.json
+
+    - name: Upload Flickr Synch artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: flickr-synch-app
+        path: publish/flickr-synch
+
+    # ── Flickr Eraser ───────────────────────────────────────────
+    - name: Publish Flickr Eraser
+      run: dotnet publish src/Flickr.Eraser.Worker/Flickr.Eraser.Worker.csproj --configuration Release --no-build --output publish/flickr-eraser
+
+    - name: Inject secrets into Flickr Eraser appsettings
+      env:
+        DB_SERVER: ${{ secrets.DB_SERVER }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      run: |
+        sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/flickr-eraser/appsettings.json
+        sed -i "s#YOUR_USER#$DB_USER#g"              publish/flickr-eraser/appsettings.json
+        sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/flickr-eraser/appsettings.json
+
+    - name: Upload Flickr Eraser artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: flickr-eraser-app
+        path: publish/flickr-eraser
+
+    # ── Flickr Geo ──────────────────────────────────────────────
+    - name: Publish Flickr Geo
+      run: dotnet publish src/Flickr.Geo.Worker/Flickr.Geo.Worker.csproj --configuration Release --no-build --output publish/flickr-geo
+
+    - name: Inject secrets into Flickr Geo appsettings
+      env:
+        DB_SERVER: ${{ secrets.DB_SERVER }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        FLICKR_API_KEY: ${{ secrets.FLICKR_API_KEY }}
+        FLICKR_API_SECRET: ${{ secrets.FLICKR_API_SECRET }}
+      run: |
+        sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g"       publish/flickr-geo/appsettings.json
+        sed -i "s#YOUR_USER#$DB_USER#g"                    publish/flickr-geo/appsettings.json
+        sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"            publish/flickr-geo/appsettings.json
+        sed -i "s#YOUR_FLICKR_API_KEY#$FLICKR_API_KEY#g"  publish/flickr-geo/appsettings.json
+        sed -i "s#YOUR_FLICKR_API_SECRET#$FLICKR_API_SECRET#g" publish/flickr-geo/appsettings.json
+
+    - name: Upload Flickr Geo artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: flickr-geo-app
+        path: publish/flickr-geo
+
+    # ── Flickr Matcher ──────────────────────────────────────────
+    - name: Publish Flickr Matcher
+      run: dotnet publish src/Flickr.Matcher.Worker/Flickr.Matcher.Worker.csproj --configuration Release --no-build --output publish/flickr-matcher
+
+    - name: Inject secrets into Flickr Matcher appsettings
+      env:
+        DB_SERVER: ${{ secrets.DB_SERVER }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      run: |
+        sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/flickr-matcher/appsettings.json
+        sed -i "s#YOUR_USER#$DB_USER#g"              publish/flickr-matcher/appsettings.json
+        sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/flickr-matcher/appsettings.json
+
+    - name: Upload Flickr Matcher artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: flickr-matcher-app
+        path: publish/flickr-matcher
+
+  # ─────────────────────────────────────────────────────────────
+  # DEPLOY — eBird + Sound (existing)
+  # ─────────────────────────────────────────────────────────────
+  deploy-ebird:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-    - name: Download production artifacts
+    - name: Download eBird artifact
       uses: actions/download-artifact@v4
       with:
-        name: worker-app
+        name: ebird-app
         path: ./app
 
-    - name: Copy application to Linode
+    - name: Copy to Linode
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.LINODE_HOST }}
@@ -72,7 +168,7 @@ jobs:
         source: "app/."
         target: "/APPS/ebird-ingestor/app"
 
-    - name: Set Permissions and Restart Services
+    - name: Set permissions and restart services
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.LINODE_HOST }}
@@ -80,16 +176,153 @@ jobs:
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
           DEPLOY_PATH="/APPS/ebird-ingestor/app"
-          
-          # Fix ownership
           sudo chown -R root:root $DEPLOY_PATH
-          
-          # Set permissions
           sudo chmod -R 755 $DEPLOY_PATH
-          
-          # Restart and enable services
           sudo systemctl restart ebird-ingestor.service
           sudo systemctl enable ebird-ingestor.service
-          
           sudo systemctl restart sound-ingestor.service
           sudo systemctl enable sound-ingestor.service
+
+  # ─────────────────────────────────────────────────────────────
+  # DEPLOY — Flickr Synch
+  # ─────────────────────────────────────────────────────────────
+  deploy-flickr-synch:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Flickr Synch artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: flickr-synch-app
+        path: ./app
+
+    - name: Copy to Linode
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        source: "app/."
+        target: "/APPS/flickr-synch/app"
+
+    - name: Set permissions and restart service
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        script: |
+          DEPLOY_PATH="/APPS/flickr-synch/app"
+          sudo chown -R root:root $DEPLOY_PATH
+          sudo chmod -R 755 $DEPLOY_PATH
+          sudo systemctl restart flickr-synch.service
+          sudo systemctl enable flickr-synch.service
+
+  # ─────────────────────────────────────────────────────────────
+  # DEPLOY — Flickr Eraser
+  # ─────────────────────────────────────────────────────────────
+  deploy-flickr-eraser:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Flickr Eraser artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: flickr-eraser-app
+        path: ./app
+
+    - name: Copy to Linode
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        source: "app/."
+        target: "/APPS/flickr-eraser/app"
+
+    - name: Set permissions and restart service
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        script: |
+          DEPLOY_PATH="/APPS/flickr-eraser/app"
+          sudo chown -R root:root $DEPLOY_PATH
+          sudo chmod -R 755 $DEPLOY_PATH
+          sudo systemctl restart flickr-eraser.service
+          sudo systemctl enable flickr-eraser.service
+
+  # ─────────────────────────────────────────────────────────────
+  # DEPLOY — Flickr Geo
+  # ─────────────────────────────────────────────────────────────
+  deploy-flickr-geo:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Flickr Geo artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: flickr-geo-app
+        path: ./app
+
+    - name: Copy to Linode
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        source: "app/."
+        target: "/APPS/flickr-geo/app"
+
+    - name: Set permissions and restart service
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        script: |
+          DEPLOY_PATH="/APPS/flickr-geo/app"
+          sudo chown -R root:root $DEPLOY_PATH
+          sudo chmod -R 755 $DEPLOY_PATH
+          sudo systemctl restart flickr-geo.service
+          sudo systemctl enable flickr-geo.service
+
+  # ─────────────────────────────────────────────────────────────
+  # DEPLOY — Flickr Matcher
+  # ─────────────────────────────────────────────────────────────
+  deploy-flickr-matcher:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Flickr Matcher artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: flickr-matcher-app
+        path: ./app
+
+    - name: Copy to Linode
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        source: "app/."
+        target: "/APPS/flickr-matcher/app"
+
+    - name: Set permissions and restart service
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        script: |
+          DEPLOY_PATH="/APPS/flickr-matcher/app"
+          sudo chown -R root:root $DEPLOY_PATH
+          sudo chmod -R 755 $DEPLOY_PATH
+          sudo systemctl restart flickr-matcher.service
+          sudo systemctl enable flickr-matcher.service

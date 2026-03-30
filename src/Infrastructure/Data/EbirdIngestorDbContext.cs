@@ -19,6 +19,11 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
     public DbSet<IngestionQueue> IngestionQueue { get; set; }
     public DbSet<SoundSignature> SoundSignatures { get; set; }
 
+    // Flickr workers
+    public DbSet<FlickrPhoto> FlickrPhotos { get; set; }
+    public DbSet<FlickrPhotoLocation> FlickrPhotoLocations { get; set; }
+    public DbSet<SpeciesPhoto> SpeciesPhotos { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -82,6 +87,33 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
             entity.HasOne(s => s.Species)
                 .WithMany()
                 .HasForeignKey(s => s.SpeciesId);
+        });
+
+        // ── Flickr entities ────────────────────────────────────────────────
+
+        modelBuilder.Entity<FlickrPhoto>(entity =>
+        {
+            entity.HasIndex(p => p.PhotoId).IsUnique();
+        });
+
+        modelBuilder.Entity<FlickrPhotoLocation>(entity =>
+        {
+            entity.HasOne(l => l.Photo)
+                .WithOne(p => p.Location)
+                .HasForeignKey<FlickrPhotoLocation>(l => l.FlickrPhotoId);
+        });
+
+        modelBuilder.Entity<SpeciesPhoto>(entity =>
+        {
+            entity.HasKey(sp => new { sp.SpeciesId, sp.FlickrPhotoId });
+
+            entity.HasOne(sp => sp.Species)
+                .WithMany()
+                .HasForeignKey(sp => sp.SpeciesId);
+
+            entity.HasOne(sp => sp.FlickrPhoto)
+                .WithMany(p => p.SpeciesPhotos)
+                .HasForeignKey(sp => sp.FlickrPhotoId);
         });
     }
 }

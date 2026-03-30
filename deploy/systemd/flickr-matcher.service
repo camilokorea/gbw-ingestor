@@ -1,0 +1,16 @@
+[Unit]
+Description=GBW Flickr Matcher Worker — matches unlinked Flickr photos to species by scientific name
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/APPS/flickr-matcher/app
+ExecStart=/usr/bin/dotnet /APPS/flickr-matcher/app/Flickr.Matcher.Worker.dll
+Restart=no
+User=root
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=flickr-matcher
+
+[Install]
+WantedBy=multi-user.target

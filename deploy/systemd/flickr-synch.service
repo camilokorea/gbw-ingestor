@@ -1,0 +1,16 @@
+[Unit]
+Description=GBW Flickr Synch Worker — downloads new photos from Flickr groups into eBirdIngestor DB
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/APPS/flickr-synch/app
+ExecStart=/usr/bin/dotnet /APPS/flickr-synch/app/Flickr.Synch.Worker.dll
+Restart=no
+User=root
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=flickr-synch
+
+[Install]
+WantedBy=multi-user.target
