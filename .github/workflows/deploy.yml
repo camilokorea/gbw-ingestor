@@ -206,7 +206,7 @@ jobs:
         source: "app/."
         target: "/APPS/flickr-synch"
 
-    - name: Set permissions and restart service
+    - name: Set permissions
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.LINODE_HOST }}
@@ -216,8 +216,7 @@ jobs:
           DEPLOY_PATH="/APPS/flickr-synch/app"
           sudo chown -R root:root $DEPLOY_PATH
           sudo chmod -R 755 $DEPLOY_PATH
-          sudo systemctl restart flickr-synch.service
-          sudo systemctl enable flickr-synch.service
+          sudo systemctl daemon-reload
 
   # ─────────────────────────────────────────────────────────────
   # DEPLOY — Flickr Eraser
@@ -242,7 +241,7 @@ jobs:
         source: "app/."
         target: "/APPS/flickr-eraser"
 
-    - name: Set permissions and restart service
+    - name: Set permissions
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.LINODE_HOST }}
@@ -252,8 +251,7 @@ jobs:
           DEPLOY_PATH="/APPS/flickr-eraser/app"
           sudo chown -R root:root $DEPLOY_PATH
           sudo chmod -R 755 $DEPLOY_PATH
-          sudo systemctl restart flickr-eraser.service
-          sudo systemctl enable flickr-eraser.service
+          sudo systemctl daemon-reload
 
   # ─────────────────────────────────────────────────────────────
   # DEPLOY — Flickr Geo
@@ -278,7 +276,7 @@ jobs:
         source: "app/."
         target: "/APPS/flickr-geo"
 
-    - name: Set permissions and restart service
+    - name: Set permissions
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.LINODE_HOST }}
@@ -288,8 +286,7 @@ jobs:
           DEPLOY_PATH="/APPS/flickr-geo/app"
           sudo chown -R root:root $DEPLOY_PATH
           sudo chmod -R 755 $DEPLOY_PATH
-          sudo systemctl restart flickr-geo.service
-          sudo systemctl enable flickr-geo.service
+          sudo systemctl daemon-reload
 
   # ─────────────────────────────────────────────────────────────
   # DEPLOY — Flickr Matcher
@@ -314,7 +311,7 @@ jobs:
         source: "app/."
         target: "/APPS/flickr-matcher"
 
-    - name: Set permissions and restart service
+    - name: Set permissions
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.LINODE_HOST }}
@@ -324,5 +321,4 @@ jobs:
           DEPLOY_PATH="/APPS/flickr-matcher/app"
           sudo chown -R root:root $DEPLOY_PATH
           sudo chmod -R 755 $DEPLOY_PATH
-          sudo systemctl restart flickr-matcher.service
-          sudo systemctl enable flickr-matcher.service
+          sudo systemctl daemon-reload
