@@ -166,7 +166,7 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/ebird-ingestor/app"
+        target: "/APPS/ebird-ingestor"
 
     - name: Set permissions and restart services
       uses: appleboy/ssh-action@v1.0.0
@@ -204,7 +204,7 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/flickr-synch/app"
+        target: "/APPS/flickr-synch"
 
     - name: Set permissions and restart service
       uses: appleboy/ssh-action@v1.0.0
@@ -240,7 +240,7 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/flickr-eraser/app"
+        target: "/APPS/flickr-eraser"
 
     - name: Set permissions and restart service
       uses: appleboy/ssh-action@v1.0.0
@@ -276,7 +276,7 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/flickr-geo/app"
+        target: "/APPS/flickr-geo"
 
     - name: Set permissions and restart service
       uses: appleboy/ssh-action@v1.0.0
@@ -312,7 +312,7 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/flickr-matcher/app"
+        target: "/APPS/flickr-matcher"
 
     - name: Set permissions and restart service
       uses: appleboy/ssh-action@v1.0.0
