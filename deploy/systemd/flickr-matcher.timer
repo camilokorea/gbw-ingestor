@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Flickr Matcher Worker every 6 hours (1h after Synch)
+Requires=flickr-matcher.service
+
+[Timer]
+OnBootSec=65min
+OnUnitActiveSec=6h
+Unit=flickr-matcher.service
+
+[Install]
+WantedBy=timers.target

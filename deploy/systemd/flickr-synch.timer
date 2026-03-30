@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Flickr Synch Worker every 6 hours
+Requires=flickr-synch.service
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=6h
+Unit=flickr-synch.service
+
+[Install]
+WantedBy=timers.target

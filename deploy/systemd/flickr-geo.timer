@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Flickr Geo Worker every 6 hours (30min after Synch)
+Requires=flickr-geo.service
+
+[Timer]
+OnBootSec=35min
+OnUnitActiveSec=6h
+Unit=flickr-geo.service
+
+[Install]
+WantedBy=timers.target

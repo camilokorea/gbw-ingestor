@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Flickr Eraser Worker once daily at 2:00 AM
+Requires=flickr-eraser.service
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+Unit=flickr-eraser.service
+
+[Install]
+WantedBy=timers.target
