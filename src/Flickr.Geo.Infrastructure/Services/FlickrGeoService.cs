@@ -11,6 +11,8 @@ namespace Flickr.Geo.Infrastructure.Services;
 public class FlickrGeoService : IFlickrGeoService
 {
     private const int BatchSize = 1500;
+    private const int MaxConcurrency = 10;   // max simultaneous Flickr API calls
+    private const int MaxRetries = 4;
 
     private readonly EbirdIngestorDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -34,7 +36,6 @@ public class FlickrGeoService : IFlickrGeoService
         var apiKey = _configuration["FlickrApi:ApiKey"]
             ?? throw new InvalidOperationException("FlickrApi:ApiKey is not configured.");
 
-        // Load photos that don't yet have a FlickrPhotoLocation record
         var photos = await _db.FlickrPhotos
             .Where(p => p.Location == null)
             .Select(p => new { p.Id, p.PhotoId })
@@ -43,65 +44,29 @@ public class FlickrGeoService : IFlickrGeoService
         _logger.LogInformation("Found {Count} photos without geolocation.", photos.Count);
 
         var client = _httpClientFactory.CreateClient("Flickr");
+        var semaphore = new SemaphoreSlim(MaxConcurrency, MaxConcurrency);
         var totalUpdated = 0;
 
         for (int i = 0; i < photos.Count; i += BatchSize)
         {
             var batch = photos.Skip(i).Take(BatchSize).ToList();
-            _logger.LogInformation("Processing geo batch {Start}-{End} of {Total}...", i + 1, i + batch.Count, photos.Count);
+            _logger.LogInformation("Processing geo batch {Start}-{End} of {Total}...",
+                i + 1, i + batch.Count, photos.Count);
 
             var tasks = batch.Select(async photo =>
             {
-                var url = $"https://www.flickr.com/services/rest/" +
-                          $"?method=flickr.photos.geo.getLocation" +
-                          $"&api_key={apiKey}" +
-                          $"&photo_id={photo.PhotoId}" +
-                          $"&format=json&nojsoncallback=1";
+                await semaphore.WaitAsync(cancellationToken);
                 try
                 {
-                    var response = await client.GetAsync(url, cancellationToken);
-                    if (!response.IsSuccessStatusCode) return (FlickrPhotoLocation?)null;
-
-                    var json = await response.Content.ReadAsStringAsync(cancellationToken);
-                    var doc = JsonDocument.Parse(json);
-                    var root = doc.RootElement;
-
-                    if (!root.TryGetProperty("stat", out var stat) || stat.GetString() != "ok")
-                        return null;
-
-                    var location = root.GetProperty("photo").GetProperty("location");
-
-                    return new FlickrPhotoLocation
-                    {
-                        FlickrPhotoId = photo.Id,
-                        Latitude = GetDouble(location, "latitude"),
-                        Longitude = GetDouble(location, "longitude"),
-                        Accuracy = GetInt(location, "accuracy"),
-                        Context = GetInt(location, "context"),
-                        PlaceId = GetString(location, "place_id"),
-                        WoeId = GetLong(location, "woeid"),
-                        LocalityName = GetNestedString(location, "locality", "_content"),
-                        LocalityPlaceId = GetNestedString(location, "locality", "place_id"),
-                        LocalityWoeId = GetNestedLong(location, "locality", "woeid"),
-                        CountyName = GetNestedString(location, "county", "_content"),
-                        CountyPlaceId = GetNestedString(location, "county", "place_id"),
-                        CountyWoeId = GetNestedLong(location, "county", "woeid"),
-                        RegionName = GetNestedString(location, "region", "_content"),
-                        RegionPlaceId = GetNestedString(location, "region", "place_id"),
-                        RegionWoeId = GetNestedLong(location, "region", "woeid"),
-                        CountryName = GetNestedString(location, "country", "_content"),
-                        CountryPlaceId = GetNestedString(location, "country", "place_id"),
-                        CountryWoeId = GetNestedLong(location, "country", "woeid"),
-                    };
+                    return await GetLocationAsync(client, photo.Id, photo.PhotoId, apiKey, cancellationToken);
                 }
-                catch (Exception ex)
+                finally
                 {
-                    _logger.LogWarning("Geo request failed for PhotoId={PhotoId}: {Message}", photo.PhotoId, ex.Message);
-                    return null;
+                    semaphore.Release();
                 }
             });
 
-            var results = (await Task.WhenAll(tasks)).Where(r => r != null).ToList();
+            var results = (await Task.WhenAll(tasks)).Where(r => r is not null).ToList();
 
             if (results.Count > 0)
             {
@@ -115,6 +80,78 @@ public class FlickrGeoService : IFlickrGeoService
         }
 
         _logger.LogInformation("Geo worker complete. Total geolocated: {Count}", totalUpdated);
+    }
+
+    private async Task<FlickrPhotoLocation?> GetLocationAsync(
+        HttpClient client,
+        int photoDbId,
+        long flickrPhotoId,
+        string apiKey,
+        CancellationToken cancellationToken)
+    {
+        var url = $"https://www.flickr.com/services/rest/" +
+                  $"?method=flickr.photos.geo.getLocation" +
+                  $"&api_key={apiKey}" +
+                  $"&photo_id={flickrPhotoId}" +
+                  $"&format=json&nojsoncallback=1";
+
+        for (int attempt = 0; attempt < MaxRetries; attempt++)
+        {
+            try
+            {
+                var response = await client.GetAsync(url, cancellationToken);
+
+                if ((int)response.StatusCode == 429)
+                {
+                    var wait = response.Headers.RetryAfter?.Delta
+                        ?? TimeSpan.FromSeconds(Math.Pow(2, attempt + 1));
+                    _logger.LogWarning("429 on PhotoId={Id}. Waiting {S}s.", flickrPhotoId, wait.TotalSeconds);
+                    await Task.Delay(wait, cancellationToken);
+                    continue;
+                }
+
+                if (!response.IsSuccessStatusCode) return null;
+
+                var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (!root.TryGetProperty("stat", out var stat) || stat.GetString() != "ok")
+                    return null;
+
+                var location = root.GetProperty("photo").GetProperty("location");
+
+                return new FlickrPhotoLocation
+                {
+                    FlickrPhotoId = photoDbId,
+                    Latitude = GetDouble(location, "latitude"),
+                    Longitude = GetDouble(location, "longitude"),
+                    Accuracy = GetInt(location, "accuracy"),
+                    Context = GetInt(location, "context"),
+                    PlaceId = GetString(location, "place_id"),
+                    WoeId = GetLong(location, "woeid"),
+                    LocalityName = GetNestedString(location, "locality", "_content"),
+                    LocalityPlaceId = GetNestedString(location, "locality", "place_id"),
+                    LocalityWoeId = GetNestedLong(location, "locality", "woeid"),
+                    CountyName = GetNestedString(location, "county", "_content"),
+                    CountyPlaceId = GetNestedString(location, "county", "place_id"),
+                    CountyWoeId = GetNestedLong(location, "county", "woeid"),
+                    RegionName = GetNestedString(location, "region", "_content"),
+                    RegionPlaceId = GetNestedString(location, "region", "place_id"),
+                    RegionWoeId = GetNestedLong(location, "region", "woeid"),
+                    CountryName = GetNestedString(location, "country", "_content"),
+                    CountryPlaceId = GetNestedString(location, "country", "place_id"),
+                    CountryWoeId = GetNestedLong(location, "country", "woeid"),
+                };
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning("Attempt {A} failed for PhotoId={Id}: {Msg}", attempt + 1, flickrPhotoId, ex.Message);
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)), cancellationToken);
+            }
+        }
+
+        return null;
     }
 
     private static double? GetDouble(JsonElement el, string key)

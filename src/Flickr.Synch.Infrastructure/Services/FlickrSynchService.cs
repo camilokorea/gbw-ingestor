@@ -10,6 +10,9 @@ namespace Flickr.Synch.Infrastructure.Services;
 
 public class FlickrSynchService : IFlickrSynchService
 {
+    private static readonly TimeSpan PageDelay = TimeSpan.FromMilliseconds(500);
+    private const int MaxRetries = 5;
+
     private readonly EbirdIngestorDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
@@ -35,7 +38,6 @@ public class FlickrSynchService : IFlickrSynchService
         var groups = _configuration.GetSection("FlickrApi:Groups").Get<string[]>()
             ?? throw new InvalidOperationException("FlickrApi:Groups is not configured.");
 
-        // Load existing PhotoIds into a HashSet for O(1) dedup
         var existingPhotoIds = await _db.FlickrPhotos
             .Select(p => p.PhotoId)
             .ToHashSetAsync(cancellationToken);
@@ -79,14 +81,16 @@ public class FlickrSynchService : IFlickrSynchService
 
             _logger.LogInformation("Fetching group={GroupId} page={Page}", groupId, page);
 
-            var response = await client.GetAsync(url, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            var response = await FetchWithRetryAsync(client, url, cancellationToken);
+            if (response is null)
+            {
+                _logger.LogError("Giving up on group={GroupId} page={Page} after max retries.", groupId, page);
+                break;
+            }
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             var doc = JsonDocument.Parse(json);
-
-            var photosNode = doc.RootElement.GetProperty("photos");
-            var photos = photosNode.GetProperty("photo");
+            var photos = doc.RootElement.GetProperty("photos").GetProperty("photo");
 
             if (photos.GetArrayLength() == 0)
             {
@@ -99,11 +103,9 @@ public class FlickrSynchService : IFlickrSynchService
             foreach (var photo in photos.EnumerateArray())
             {
                 var photoId = long.Parse(photo.GetProperty("id").GetString()!);
+                if (existingPhotoIds.Contains(photoId)) continue;
 
-                if (existingPhotoIds.Contains(photoId))
-                    continue;
-
-                var entity = new FlickrPhoto
+                newPhotos.Add(new FlickrPhoto
                 {
                     PhotoId = photoId,
                     Title = GetString(photo, "title"),
@@ -119,9 +121,8 @@ public class FlickrSynchService : IFlickrSynchService
                     Medium800Url = GetString(photo, "url_c"),
                     LargeUrl = GetString(photo, "url_l"),
                     WebUrl = $"https://www.flickr.com/photos/{GetString(photo, "owner")}/{photoId}"
-                };
+                });
 
-                newPhotos.Add(entity);
                 existingPhotoIds.Add(photoId);
             }
 
@@ -134,10 +135,51 @@ public class FlickrSynchService : IFlickrSynchService
             }
 
             page++;
+
+            // Polite delay between pages to avoid rate limiting
+            await Task.Delay(PageDelay, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
         return inserted;
+    }
+
+    /// <summary>
+    /// Sends GET request with automatic retry on HTTP 429, using Retry-After header or
+    /// exponential backoff (2^attempt seconds). Returns null if all retries exhausted.
+    /// </summary>
+    private async Task<HttpResponseMessage?> FetchWithRetryAsync(
+        HttpClient client,
+        string url,
+        CancellationToken cancellationToken)
+    {
+        for (int attempt = 0; attempt < MaxRetries; attempt++)
+        {
+            var response = await client.GetAsync(url, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+                return response;
+
+            if ((int)response.StatusCode == 429)
+            {
+                // Respect Retry-After header if present, else exponential backoff
+                var retryAfter = response.Headers.RetryAfter?.Delta
+                    ?? TimeSpan.FromSeconds(Math.Pow(2, attempt + 1));
+
+                _logger.LogWarning(
+                    "HTTP 429 received. Waiting {Seconds}s before retry {Attempt}/{Max}.",
+                    retryAfter.TotalSeconds, attempt + 1, MaxRetries);
+
+                await Task.Delay(retryAfter, cancellationToken);
+                continue;
+            }
+
+            // Non-retryable error
+            _logger.LogError("Unrecoverable HTTP {Status} for URL: {Url}", (int)response.StatusCode, url);
+            return null;
+        }
+
+        return null;
     }
 
     private static string GetString(JsonElement element, string property)
