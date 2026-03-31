@@ -41,10 +41,13 @@ if (!Directory.Exists(imageFolder))
 logger.LogInformation("Loading species dictionary from database...");
 
 // Build O(1) lookup: lowercase scientific name → species id
-var speciesDict = await db.Species
+// GroupBy handles any duplicate ScientificName entries in the DB (keeps first)
+var speciesDict = (await db.Species
     .AsNoTracking()
     .Select(s => new { s.Id, SciName = s.ScientificName.ToLower() })
-    .ToDictionaryAsync(s => s.SciName, s => s.Id);
+    .ToListAsync())
+    .GroupBy(s => s.SciName)
+    .ToDictionary(g => g.Key, g => g.First().Id);
 
 logger.LogInformation("Loaded {Count} species.", speciesDict.Count);
 
