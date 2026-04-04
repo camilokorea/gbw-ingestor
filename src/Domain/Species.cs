@@ -16,9 +16,9 @@ public class Species
     public string SpeciesCode { get; set; } = string.Empty;
 
     /// <summary>
-    /// Nombre común de la especie.
+    /// Collection of localized common names for this species.
     /// </summary>
-    public string CommonName { get; set; } = string.Empty;
+    public ICollection<SpeciesTranslation> Translations { get; set; } = new List<SpeciesTranslation>();
 
     /// <summary>
     /// Nombre científico de la especie.

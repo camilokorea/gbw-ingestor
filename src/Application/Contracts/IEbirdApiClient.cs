@@ -6,4 +6,5 @@ public interface IEbirdApiClient
 {
     Task<IEnumerable<EbirdObservationDto>> GetRecentObservationsAsync(string regionCode);
     Task<EbirdLocationDetailsDto> GetLocationDetailsAsync(string locId);
+    Task<string?> GetSpeciesLocalizedNameAsync(string speciesCode, string locale = "es");
 }

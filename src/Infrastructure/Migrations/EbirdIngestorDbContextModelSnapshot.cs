@@ -324,10 +324,6 @@ namespace eBird.Ingestor.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("CommonName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ScientificName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -395,6 +391,33 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.HasIndex("FlickrPhotoId");
 
                     b.ToTable("SpeciesPhotos");
+                });
+
+            modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CommonName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("SpeciesId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpeciesId", "Locale")
+                        .IsUnique();
+
+                    b.ToTable("SpeciesTranslations");
                 });
 
             modelBuilder.Entity("eBird.Ingestor.Domain.State", b =>
@@ -515,6 +538,17 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.Navigation("Species");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesTranslation", b =>
+                {
+                    b.HasOne("eBird.Ingestor.Domain.Species", "Species")
+                        .WithMany("Translations")
+                        .HasForeignKey("SpeciesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Species");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.State", b =>
                 {
                     b.HasOne("eBird.Ingestor.Domain.Country", "Country")
@@ -548,6 +582,8 @@ namespace eBird.Ingestor.Infrastructure.Migrations
             modelBuilder.Entity("eBird.Ingestor.Domain.Species", b =>
                 {
                     b.Navigation("Observations");
+
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("eBird.Ingestor.Domain.State", b =>

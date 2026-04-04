@@ -18,6 +18,7 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
     public DbSet<State> States { get; set; }
     public DbSet<IngestionQueue> IngestionQueue { get; set; }
     public DbSet<SoundSignature> SoundSignatures { get; set; }
+    public DbSet<SpeciesTranslation> SpeciesTranslations { get; set; }
 
     // Flickr workers
     public DbSet<FlickrPhoto> FlickrPhotos { get; set; }
@@ -64,6 +65,16 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<Species>(entity =>
         {
             entity.HasIndex(s => s.SpeciesCode).IsUnique();
+        });
+
+        modelBuilder.Entity<SpeciesTranslation>(entity =>
+        {
+            // Un species solo puede tener una traducción por idioma.
+            entity.HasIndex(st => new { st.SpeciesId, st.Locale }).IsUnique();
+
+            entity.HasOne(st => st.Species)
+                .WithMany(s => s.Translations)
+                .HasForeignKey(st => st.SpeciesId);
         });
 
         modelBuilder.Entity<Observation>(entity =>

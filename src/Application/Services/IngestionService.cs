@@ -173,9 +173,33 @@ public class IngestionService : IIngestionService
             species = new Species
             {
                 SpeciesCode = dto.SpeciesCode,
-                CommonName = dto.ComName,
                 ScientificName = dto.SciName
             };
+
+            // English is the default from the observation DTO
+            species.Translations.Add(new SpeciesTranslation { Locale = "en", CommonName = dto.ComName });
+
+            // Fetch additional languages in parallel
+            var locales = new[] { "es", "pt", "fr" };
+            var tasks = locales.Select(async locale => 
+            {
+                var localizedName = await _apiClient.GetSpeciesLocalizedNameAsync(dto.SpeciesCode, locale);
+                if (!string.IsNullOrEmpty(localizedName) && localizedName != dto.ComName) 
+                {
+                    return new SpeciesTranslation { Locale = locale, CommonName = localizedName };
+                }
+                return null;
+            });
+
+            var results = await Task.WhenAll(tasks);
+            foreach (var result in results)
+            {
+                if (result != null)
+                {
+                    species.Translations.Add(result);
+                }
+            }
+
             _dbContext.Species.Add(species);
         }
         return species;

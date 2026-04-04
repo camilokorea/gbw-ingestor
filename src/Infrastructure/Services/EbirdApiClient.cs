@@ -60,6 +60,36 @@ public class EbirdApiClient : IEbirdApiClient
         return details ?? new EbirdLocationDetailsDto();
     }
 
+    public async Task<string?> GetSpeciesLocalizedNameAsync(string speciesCode, string locale = "es")
+    {
+        var apiKey = _configuration["eBirdApi:ApiKey"];
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-eBirdApiToken", apiKey);
+
+        var url = $"https://api.ebird.org/v2/ref/taxonomy/ebird?species={speciesCode}&locale={locale}&fmt=json";
+        var policy = GetRetryPolicy();
+        var response = await policy.ExecuteAsync(() => client.GetAsync(url));
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var json = await response.Content.ReadAsStringAsync();
+        // The API returns an array of taxonomy objects
+        using var doc = JsonDocument.Parse(json);
+        if (doc.RootElement.ValueKind == JsonValueKind.Array && doc.RootElement.GetArrayLength() > 0)
+        {
+            var firstItem = doc.RootElement[0];
+            if (firstItem.TryGetProperty("comName", out var comNameElement) && comNameElement.ValueKind == JsonValueKind.String)
+            {
+                return comNameElement.GetString();
+            }
+        }
+        
+        return null;
+    }
+
     private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
     {
         return HttpPolicyExtensions
