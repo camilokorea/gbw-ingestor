@@ -19,12 +19,25 @@ public class FlickrMatcherService : IFlickrMatcherService
 
     public async Task MatchPhotosToSpeciesAsync(CancellationToken cancellationToken = default)
     {
-        // Build O(n) lookup: lowercase sciname → speciesId
-        var speciesLookup = await _db.Species
+        var allSpecies = await _db.Species
             .Select(s => new { s.Id, SciName = s.ScientificName.ToLower() })
-            .ToDictionaryAsync(s => s.SciName, s => s.Id, cancellationToken);
+            .ToListAsync(cancellationToken);
 
-        _logger.LogInformation("Loaded {Count} species for matching.", speciesLookup.Count);
+        var duplicates = allSpecies
+            .GroupBy(s => s.SciName)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicates.Any())
+            _logger.LogWarning("Found {Count} duplicate scientific names (using first match): {Names}",
+                duplicates.Count, string.Join(", ", duplicates));
+
+        var speciesLookup = allSpecies
+            .GroupBy(s => s.SciName)
+            .ToDictionary(g => g.Key, g => g.First().Id);
+
+        _logger.LogInformation("Loaded {Count} distinct species for matching.", speciesLookup.Count);
 
         // Only load photos not yet linked to any species
         var unlinkedPhotos = await _db.FlickrPhotos
