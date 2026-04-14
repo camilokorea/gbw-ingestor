@@ -26,6 +26,21 @@ public class Species
     public string ScientificName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Scientific Taxonomic Order (e.g., Passeriformes)
+    /// </summary>
+    public string? Order { get; set; }
+
+    /// <summary>
+    /// Scientific Taxonomic Family (e.g., Anatidae)
+    /// </summary>
+    public string? FamilySciName { get; set; }
+
+    /// <summary>
+    /// Common Taxonomic Family Name (e.g., Ducks, Geese, and Waterfowl)
+    /// </summary>
+    public string? FamilyComName { get; set; }
+
+    /// <summary>
     /// Colección de observaciones para esta especie.
     /// </summary>
     public ICollection<Observation> Observations { get; set; } = new List<Observation>();

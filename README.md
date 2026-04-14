@@ -2,9 +2,10 @@
 
 This project is an automated data ingestion service that consumes multiple APIs to fetch bird-related data and stores it in a SQL Server database. The process is designed to run periodically, maintaining an updated local database of bird sightings and sound recordings from different regions around the world.
 
-The solution is composed of two main ingestion processes:
+The solution is composed of three main ingestion processes:
 1.  **eBird Ingestor**: Fetches recent bird observations from the eBird API.
 2.  **Sound Ingestor**: Fetches bird sound recordings from the Xeno-Canto API.
+3.  **Taxonomy Backfill**: A custom localized utility (`tools/TaxonomyBackfill`) that hits the eBird Taxonomy API to automatically map and hydrate authentic biological taxonomy (Order, Families) straight into the database.
 
 ---
 
