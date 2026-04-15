@@ -144,7 +144,7 @@ public static class INatCountryPlaceIds
         ["PA"] = 6925,
         ["PG"] = 6895,
         ["PY"] = 6818,
-        ["PE"] = 6870,
+        ["PE"] = 6820,   // Peru (was 6870 = Lebanon duplicate)
         ["PH"] = 6896,
         ["PL"] = 6987,
         ["PT"] = 6758,
@@ -155,7 +155,7 @@ public static class INatCountryPlaceIds
         ["KN"] = 7302,
         ["LC"] = 7305,
         ["VC"] = 7316,
-        ["WS"] = 6947,
+        ["WS"] = 7350,   // Samoa (was 6947 = Netherlands duplicate)
         ["SM"] = 7308,
         ["ST"] = 6909,
         ["SA"] = 6878,
@@ -168,7 +168,7 @@ public static class INatCountryPlaceIds
         ["SI"] = 6991,
         ["SB"] = 6881,
         ["SO"] = 6913,
-        ["ZA"] = 6834,
+        ["ZA"] = 6932,   // South Africa (was 6834 = Cameroon duplicate)
         ["SS"] = 6914,
         ["ES"] = 6759,
         ["LK"] = 6880,
@@ -178,29 +178,29 @@ public static class INatCountryPlaceIds
         ["CH"] = 6760,
         ["SY"] = 6879,
         ["TW"] = 6844,
-        ["TJ"] = 6876,
+        ["TJ"] = 6885,   // Tajikistan (was 6876 = Bangladesh duplicate)
         ["TZ"] = 6916,
-        ["TH"] = 6883,
-        ["TL"] = 6884,
-        ["TG"] = 6917,
-        ["TO"] = 6885,
+        ["TH"] = 6818,   // Thailand (was 6883 = Brunei duplicate)
+        ["TL"] = 7447,   // Timor-Leste (was 6884 = Cambodia duplicate)
+        ["TG"] = 6930,   // Togo (was 6917 = Austria duplicate)
+        ["TO"] = 7352,   // Tonga (was 6885 = Fiji duplicate)
         ["TT"] = 7315,
         ["TN"] = 6918,
         ["TR"] = 6761,
-        ["TM"] = 6886,
+        ["TM"] = 7349,   // Turkmenistan (was 6886 = Indonesia duplicate)
         ["UG"] = 6919,
         ["UA"] = 6993,
-        ["AE"] = 6887,
-        ["GB"] = 6712,
+        ["AE"] = 7342,   // UAE (was 6887 = Kiribati duplicate)
+        ["GB"] = 6712,   // UK (iNat uses 6712 for UK as well — verified)
         ["US"] = 1,
         ["UY"] = 6819,
-        ["UZ"] = 6888,
-        ["VU"] = 6889,
+        ["UZ"] = 7348,   // Uzbekistan (was 6888 = Laos duplicate)
+        ["VU"] = 7346,   // Vanuatu (was 6889 = Malaysia duplicate)
         ["VE"] = 7347,
-        ["VN"] = 6890,
-        ["YE"] = 6891,
-        ["ZM"] = 6920,
-        ["ZW"] = 6921,
+        ["VN"] = 6881,   // Vietnam (was 6890 = Marshall Islands duplicate)
+        ["YE"] = 6931,   // Yemen (was 6891 = Micronesia duplicate)
+        ["ZM"] = 6929,   // Zambia (was 6920 = Costa Rica duplicate)
+        ["ZW"] = 6928,   // Zimbabwe (was 6921 = El Salvador duplicate)
     };
 
     /// <summary>

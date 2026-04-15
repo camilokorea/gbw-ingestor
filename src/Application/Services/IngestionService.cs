@@ -28,8 +28,9 @@ public class IngestionService : IIngestionService
         // Get a batch of items to process
         var queueItems = await _dbContext.IngestionQueue
             .Where(i => i.Source == "ebird" &&
-                       (i.Status == IngestionStatus.Queued || i.Status == IngestionStatus.Failed))
-            .OrderBy(i => i.LastAttemptUtc) // Prioritize retries
+                       (i.Status == IngestionStatus.Queued || i.Status == IngestionStatus.Failed) &&
+                       i.AttemptCount < 10)
+            .OrderBy(i => i.LastAttemptUtc)
             .Take(batchSize)
             .ToListAsync();
 

@@ -41,7 +41,8 @@ public class INatIngestionService : IINatIngestionService
 
         var queueItems = await _dbContext.IngestionQueue
             .Where(i => i.Source == "inat" &&
-                       (i.Status == IngestionStatus.Queued || i.Status == IngestionStatus.Failed))
+                       (i.Status == IngestionStatus.Queued || i.Status == IngestionStatus.Failed) &&
+                       i.AttemptCount < 10)
             .OrderBy(i => i.LastAttemptUtc)
             .Take(batchSize)
             .ToListAsync();
