@@ -21,10 +21,12 @@ public class QueueSeederService : IQueueSeederService
 
     public async Task SeedQueueAsync()
     {
-        _logger.LogInformation("Seeding the ingestion queue...");
+        _logger.LogInformation("Seeding the eBird ingestion queue...");
 
-        // Clear existing queue
-        await _dbContext.IngestionQueue.ExecuteDeleteAsync();
+        // Only clear eBird items — iNat items are managed by INatQueueSeederService
+        await _dbContext.IngestionQueue
+            .Where(i => i.Source == "ebird")
+            .ExecuteDeleteAsync();
 
         var allCountryCodes = _configuration.GetSection("CountriesToSeed").Get<List<string>>();
         if (allCountryCodes == null || !allCountryCodes.Any())
@@ -36,6 +38,7 @@ public class QueueSeederService : IQueueSeederService
         var queueItems = allCountryCodes.Select(code => new IngestionQueue
         {
             RegionCode = code,
+            Source = "ebird",
             Status = IngestionStatus.Queued,
             AttemptCount = 0,
             LastAttemptUtc = null
@@ -52,7 +55,8 @@ public class QueueSeederService : IQueueSeederService
         _logger.LogInformation("Checking Queue is already processed...");
 
         var queueItems = await _dbContext.IngestionQueue
-            .Where(i => i.Status == IngestionStatus.Queued || i.Status == IngestionStatus.Failed)
+            .Where(i => i.Source == "ebird" &&
+                       (i.Status == IngestionStatus.Queued || i.Status == IngestionStatus.Failed))
             .ToListAsync();
 
         if (!queueItems.Any())

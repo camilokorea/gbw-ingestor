@@ -242,6 +242,10 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -249,6 +253,8 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("RegionCode");
+
+                    b.HasIndex("Source");
 
                     b.ToTable("IngestionQueue");
                 });
@@ -302,6 +308,10 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.Property<DateTime>("ObservationDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("SpeciesId")
                         .HasColumnType("int");
 
@@ -323,6 +333,15 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FamilyComName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FamilySciName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Order")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ScientificName")
                         .IsRequired()

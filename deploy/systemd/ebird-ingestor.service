@@ -1,0 +1,16 @@
+[Unit]
+Description=eBird Ingestor Worker — downloads new bird observations from eBird into eBirdIngestor DB
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/APPS/ebird-ingestor/app
+ExecStart=/usr/bin/dotnet /APPS/ebird-ingestor/app/eBird.Ingestor.Worker.dll
+Restart=no
+User=root
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ebird-ingestor
+
+[Install]
+WantedBy=multi-user.target

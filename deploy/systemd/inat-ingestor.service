@@ -1,0 +1,16 @@
+[Unit]
+Description=iNaturalist Ingestor Worker — downloads new bird observations from iNaturalist into eBirdIngestor DB
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/APPS/inat-ingestor/app
+ExecStart=/usr/bin/dotnet /APPS/inat-ingestor/app/iNat.Ingestor.Worker.dll
+Restart=no
+User=root
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=inat-ingestor
+
+[Install]
+WantedBy=multi-user.target

@@ -41,4 +41,9 @@ public class Observation
     /// Propiedad de navegación a la especie observada.
     /// </summary>
     public Species Species { get; set; } = null!;
+
+    /// <summary>
+    /// Data source: "ebird" (default) or "inat".
+    /// </summary>
+    public string Source { get; set; } = "ebird";
 }

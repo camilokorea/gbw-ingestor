@@ -145,6 +145,26 @@ jobs:
         name: flickr-matcher-app
         path: publish/flickr-matcher
 
+    # ── iNat Ingestor ───────────────────────────────────────────
+    - name: Publish iNat Ingestor
+      run: dotnet publish src/iNat.Ingestor.Worker/iNat.Ingestor.Worker.csproj --configuration Release --no-build --output publish/inat-ingestor
+
+    - name: Inject secrets into iNat appsettings
+      env:
+        DB_SERVER: ${{ secrets.DB_SERVER }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      run: |
+        sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/inat-ingestor/appsettings.json
+        sed -i "s#YOUR_USER#$DB_USER#g"              publish/inat-ingestor/appsettings.json
+        sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/inat-ingestor/appsettings.json
+
+    - name: Upload iNat Ingestor artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: inat-ingestor-app
+        path: publish/inat-ingestor
+
   # ─────────────────────────────────────────────────────────────
   # DEPLOY — eBird + Sound (existing)
   # ─────────────────────────────────────────────────────────────
@@ -319,6 +339,41 @@ jobs:
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
           DEPLOY_PATH="/APPS/flickr-matcher/app"
+          sudo chown -R root:root $DEPLOY_PATH
+          sudo chmod -R 755 $DEPLOY_PATH
+          sudo systemctl daemon-reload
+
+  # ─────────────────────────────────────────────────────────────
+  # DEPLOY — iNat Ingestor
+  # ─────────────────────────────────────────────────────────────
+  deploy-inat-ingestor:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download iNat Ingestor artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: inat-ingestor-app
+        path: ./app
+
+    - name: Copy to Linode
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        source: "app/."
+        target: "/APPS/inat-ingestor"
+
+    - name: Set permissions
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        script: |
+          DEPLOY_PATH="/APPS/inat-ingestor/app"
           sudo chown -R root:root $DEPLOY_PATH
           sudo chmod -R 755 $DEPLOY_PATH
           sudo systemctl daemon-reload

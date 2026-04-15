@@ -92,6 +92,7 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
                 .HasConversion<string>();
 
             entity.HasIndex(e => e.RegionCode);
+            entity.HasIndex(e => e.Source);
         });
 
         modelBuilder.Entity<SoundSignature>(entity =>

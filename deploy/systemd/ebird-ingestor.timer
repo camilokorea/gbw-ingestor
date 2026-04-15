@@ -1,0 +1,11 @@
+[Unit]
+Description=Run eBird Ingestor Worker every 6 hours
+Requires=ebird-ingestor.service
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=6h
+Unit=ebird-ingestor.service
+
+[Install]
+WantedBy=timers.target

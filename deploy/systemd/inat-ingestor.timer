@@ -1,0 +1,11 @@
+[Unit]
+Description=Run iNaturalist Ingestor Worker every 6 hours
+Requires=inat-ingestor.service
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=6h
+Unit=inat-ingestor.service
+
+[Install]
+WantedBy=timers.target
