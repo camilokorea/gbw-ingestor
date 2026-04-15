@@ -90,7 +90,20 @@ public class FlickrSynchService : IFlickrSynchService
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             var doc = JsonDocument.Parse(json);
-            var photos = doc.RootElement.GetProperty("photos").GetProperty("photo");
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("stat", out var stat) || stat.GetString() != "ok")
+            {
+                _logger.LogWarning("Flickr API returned stat != ok for group={GroupId} page={Page}", groupId, page);
+                break;
+            }
+
+            if (!root.TryGetProperty("photos", out var photosContainer) || 
+                !photosContainer.TryGetProperty("photo", out var photos))
+            {
+                _logger.LogWarning("Flickr API response missing photos/photo property for group={GroupId} page={Page}", groupId, page);
+                break;
+            }
 
             if (photos.GetArrayLength() == 0)
             {

@@ -155,13 +155,28 @@ public class FlickrGeoService : IFlickrGeoService
     }
 
     private static double? GetDouble(JsonElement el, string key)
-        => el.TryGetProperty(key, out var v) && v.TryGetDouble(out var d) ? d : null;
+    {
+        if (!el.TryGetProperty(key, out var v)) return null;
+        if (v.ValueKind == JsonValueKind.Number && v.TryGetDouble(out var d)) return d;
+        if (v.ValueKind == JsonValueKind.String && double.TryParse(v.GetString(), out var s)) return s;
+        return null;
+    }
 
     private static int? GetInt(JsonElement el, string key)
-        => el.TryGetProperty(key, out var v) && v.TryGetInt32(out var i) ? i : null;
+    {
+        if (!el.TryGetProperty(key, out var v)) return null;
+        if (v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i)) return i;
+        if (v.ValueKind == JsonValueKind.String && int.TryParse(v.GetString(), out var i2)) return i2;
+        return null;
+    }
 
     private static long? GetLong(JsonElement el, string key)
-        => el.TryGetProperty(key, out var v) && v.TryGetInt64(out var l) ? l : null;
+    {
+        if (!el.TryGetProperty(key, out var v)) return null;
+        if (v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var l)) return l;
+        if (v.ValueKind == JsonValueKind.String && long.TryParse(v.GetString(), out var l2)) return l2;
+        return null;
+    }
 
     private static string? GetString(JsonElement el, string key)
         => el.TryGetProperty(key, out var v) ? v.GetString() : null;
@@ -170,5 +185,10 @@ public class FlickrGeoService : IFlickrGeoService
         => el.TryGetProperty(parent, out var p) && p.TryGetProperty(child, out var c) ? c.GetString() : null;
 
     private static long? GetNestedLong(JsonElement el, string parent, string child)
-        => el.TryGetProperty(parent, out var p) && p.TryGetProperty(child, out var c) && c.TryGetInt64(out var l) ? l : null;
+    {
+        if (!el.TryGetProperty(parent, out var p) || !p.TryGetProperty(child, out var c)) return null;
+        if (c.ValueKind == JsonValueKind.Number && c.TryGetInt64(out var l)) return l;
+        if (c.ValueKind == JsonValueKind.String && long.TryParse(c.GetString(), out var l2)) return l2;
+        return null;
+    }
 }
