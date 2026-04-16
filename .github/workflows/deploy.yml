@@ -33,9 +33,6 @@ jobs:
     - name: Publish eBird Ingestor
       run: dotnet publish src/Worker/eBird.Ingestor.Worker.csproj --configuration Release --no-build --output publish/ebird
 
-    - name: Publish Sound Ingestor
-      run: dotnet publish src/Sound.Ingestor.Worker/Sound.Ingestor.Worker.csproj --configuration Release --no-build --output publish/ebird
-
     - name: Rename eBird appsettings template
       run: mv publish/ebird/appsettings.template.json publish/ebird/appsettings.json
 
@@ -56,6 +53,26 @@ jobs:
       with:
         name: ebird-app
         path: publish/ebird
+
+    # ── Sound Ingestor ──────────────────────────────────────────
+    - name: Publish Sound Ingestor
+      run: dotnet publish src/Sound.Ingestor.Worker/Sound.Ingestor.Worker.csproj --configuration Release --no-build --output publish/sound
+
+    - name: Inject secrets into Sound appsettings
+      env:
+        DB_SERVER: ${{ secrets.DB_SERVER }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      run: |
+        sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/sound/appsettings.json
+        sed -i "s#YOUR_USER#$DB_USER#g"              publish/sound/appsettings.json
+        sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/sound/appsettings.json
+
+    - name: Upload Sound artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: sound-app
+        path: publish/sound
 
     # ── Flickr Synch ────────────────────────────────────────────
     - name: Publish Flickr Synch
@@ -166,7 +183,7 @@ jobs:
         path: publish/inat-ingestor
 
   # ─────────────────────────────────────────────────────────────
-  # DEPLOY — eBird + Sound (existing)
+  # DEPLOY — eBird Ingestor
   # ─────────────────────────────────────────────────────────────
   deploy-ebird:
     needs: build
@@ -188,7 +205,7 @@ jobs:
         source: "app/."
         target: "/APPS/ebird-ingestor"
 
-    - name: Set permissions and restart services
+    - name: Set permissions
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.LINODE_HOST }}
@@ -198,10 +215,42 @@ jobs:
           DEPLOY_PATH="/APPS/ebird-ingestor/app"
           sudo chown -R root:root $DEPLOY_PATH
           sudo chmod -R 755 $DEPLOY_PATH
-          sudo systemctl restart ebird-ingestor.service
-          sudo systemctl enable ebird-ingestor.service
-          sudo systemctl restart sound-ingestor.service
-          sudo systemctl enable sound-ingestor.service
+          sudo systemctl daemon-reload
+
+  # ─────────────────────────────────────────────────────────────
+  # DEPLOY — Sound Ingestor
+  # ─────────────────────────────────────────────────────────────
+  deploy-sound-ingestor:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Sound artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: sound-app
+        path: ./app
+
+    - name: Copy to Linode
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        source: "app/."
+        target: "/APPS/sound-ingestor"
+
+    - name: Set permissions
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        script: |
+          DEPLOY_PATH="/APPS/sound-ingestor/app"
+          sudo chown -R root:root $DEPLOY_PATH
+          sudo chmod -R 755 $DEPLOY_PATH
+          sudo systemctl daemon-reload
 
   # ─────────────────────────────────────────────────────────────
   # DEPLOY — Flickr Synch
