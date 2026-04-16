@@ -4,8 +4,9 @@ This project is an automated data ingestion service that consumes multiple APIs 
 
 The solution is composed of three main ingestion processes:
 1.  **eBird Ingestor**: Fetches recent bird observations from the eBird API.
-2.  **Sound Ingestor**: Fetches bird sound recordings from the Xeno-Canto API.
-3.  **Taxonomy Backfill**: A custom localized utility (`tools/TaxonomyBackfill`) that hits the eBird Taxonomy API to automatically map and hydrate authentic biological taxonomy (Order, Families) straight into the database.
+2.  **iNat Ingestor**: Fetches biodiversity observations from the iNaturalist API.
+3.  **Sound Ingestor**: Fetches bird sound recordings from the Xeno-Canto API.
+4.  **Taxonomy Backfill**: A custom localized utility (`tools/TaxonomyBackfill`) that hits the eBird Taxonomy API to automatically map and hydrate authentic biological taxonomy (Order, Families) straight into the database.
 
 ---
 
@@ -19,7 +20,7 @@ The solution is composed of three main ingestion processes:
 
 The project is built following the principles of **Clean Architecture** to ensure a clear separation of concerns, high cohesion, low coupling, and maintainability.
 
-The solution is divided into two main features, **eBird.Ingestor** and **Sound.Ingestor**, each with its own set of layers:
+The solution is divided into three main features: **eBird.Ingestor**, **iNat.Ingestor**, and **Sound.Ingestor**, each with its own set of layers:
 
 ### 1. Domain
 
@@ -54,6 +55,7 @@ Implements the services defined in the `Application` layer. This is where all te
 The application's entry points. They are .NET Console projects that compose the different layers through Dependency Injection and execute the ingestion processes.
 
 - **eBird.Ingestor.Worker**: Executes the eBird observation ingestion.
+- **iNat.Ingestor.Worker**: Executes the iNaturalist observation ingestion.
 - **Sound.Ingestor.Worker**: Executes the sound recording ingestion.
 
 ## Tech Stack
@@ -63,6 +65,7 @@ The application's entry points. They are .NET Console projects that compose the 
 - **Database**: SQL Server
 - **External APIs**:
     - eBird API v2
+    - iNaturalist API
     - Xeno-Canto API
 
 ## Getting Started
@@ -101,6 +104,11 @@ Follow these steps to set up and run the project in your local environment.
     -   **To run the eBird Ingestor:**
         ```sh
         dotnet run --project src/Worker
+        ```
+
+    -   **To run the iNat Ingestor:**
+        ```sh
+        dotnet run --project src/iNat.Ingestor.Worker
         ```
 
     -   **To run the Sound Ingestor:**
