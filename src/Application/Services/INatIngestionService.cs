@@ -93,7 +93,7 @@ public class INatIngestionService : IINatIngestionService
 
                     foreach (var dto in observations)
                     {
-                        var species = await GetOrCreateSpeciesAsync(dto.Taxon);
+                        var species = await GetOrCreateSpeciesAsync(dto);
                         var location = await GetOrCreateLocationAsync(dto, item.RegionCode, country);
 
                         // Deduplication: location ID is unique per iNat observation
@@ -175,20 +175,36 @@ public class INatIngestionService : IINatIngestionService
         return location;
     }
 
-    private async Task<Species> GetOrCreateSpeciesAsync(INatTaxonDto taxon)
+    private async Task<Species> GetOrCreateSpeciesAsync(INatObservationDto dto)
     {
+        var taxon = dto.Taxon;
         // Primary key: ScientificName — bridges iNat and eBird taxonomy
         var species = _dbContext.Species.Local.FirstOrDefault(s => s.ScientificName == taxon.Name)
                    ?? await _dbContext.Species.FirstOrDefaultAsync(s => s.ScientificName == taxon.Name);
 
         if (species == null)
         {
+            var family = taxon.Family;
+            var order = taxon.Order;
+
+            // iNat Observations API often omits family/order in the root taxon.
+            // We extract them from the ancestors array in the identifications.
+            if (string.IsNullOrEmpty(family) || string.IsNullOrEmpty(order))
+            {
+                var ancestors = dto.Identifications?.FirstOrDefault()?.Taxon?.Ancestors;
+                if (ancestors != null)
+                {
+                    family ??= ancestors.FirstOrDefault(a => a.Rank == "family")?.Name;
+                    order ??= ancestors.FirstOrDefault(a => a.Rank == "order")?.Name;
+                }
+            }
+
             species = new Species
             {
                 SpeciesCode = $"inat-{taxon.Id}",
                 ScientificName = taxon.Name,
-                Order = taxon.Order,
-                FamilySciName = taxon.Family
+                Order = order,
+                FamilySciName = family
             };
 
             // Add English common name if available

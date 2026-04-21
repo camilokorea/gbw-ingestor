@@ -22,8 +22,32 @@ public class INatObservationDto
     [JsonPropertyName("taxon")]
     public INatTaxonDto Taxon { get; set; } = null!;
 
+    [JsonPropertyName("identifications")]
+    public List<INatIdentificationDto>? Identifications { get; set; }
+
     [JsonPropertyName("geojson")]
     public INatGeoJsonDto? Geojson { get; set; }
+}
+
+public class INatIdentificationDto
+{
+    [JsonPropertyName("taxon")]
+    public INatTaxonDetailDto Taxon { get; set; } = null!;
+}
+
+public class INatTaxonDetailDto
+{
+    [JsonPropertyName("ancestors")]
+    public List<INatAncestorDto>? Ancestors { get; set; }
+}
+
+public class INatAncestorDto
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("rank")]
+    public string Rank { get; set; } = string.Empty;
 }
 
 public class INatTaxonDto
