@@ -1,6 +1,4 @@
-using eBird.Ingestor.Infrastructure;
-using Flickr.Matcher.Application;
-using Flickr.Matcher.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -20,6 +18,10 @@ public class Program
 
         try
         {
+            // Automatic migration on startup
+            var dbContext = services.GetRequiredService<eBird.Ingestor.Infrastructure.Data.EbirdIngestorDbContext>();
+            await dbContext.Database.MigrateAsync();
+
             var matcherService = services.GetRequiredService<IFlickrMatcherService>();
             await matcherService.MatchPhotosToSpeciesAsync();
             Console.WriteLine("Flickr Matcher Worker completed successfully.");
