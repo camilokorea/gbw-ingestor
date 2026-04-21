@@ -74,7 +74,7 @@ public class FlickrSynchService : IFlickrSynchService
                       $"?method=flickr.groups.pools.getPhotos" +
                       $"&api_key={apiKey}" +
                       $"&group_id={groupId}" +
-                      $"&extras=url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o,owner_name,path_alias" +
+                      $"&extras=url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o,owner_name,path_alias,tags" +
                       $"&per_page={pageSize}" +
                       $"&page={page}" +
                       $"&format=json&nojsoncallback=1";
@@ -124,6 +124,7 @@ public class FlickrSynchService : IFlickrSynchService
                     Title = GetString(photo, "title"),
                     OwnerName = GetString(photo, "ownername"),
                     UserId = GetString(photo, "owner"),
+                    Tags = GetString(photo, "tags"),
                     SquareThumbnailUrl = GetString(photo, "url_sq"),
                     LargeSquareThumbnailUrl = GetString(photo, "url_q"),
                     ThumbnailUrl = GetString(photo, "url_t"),

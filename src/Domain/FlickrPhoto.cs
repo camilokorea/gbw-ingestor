@@ -50,6 +50,9 @@ public class FlickrPhoto
     /// <summary>Large image (1024px on longest side).</summary>
     public string LargeUrl { get; set; } = string.Empty;
 
+    /// <summary>Space-delimited tags from Flickr.</summary>
+    public string? Tags { get; set; }
+
     /// <summary>Optional geolocation data fetched by the Geo worker.</summary>
     public FlickrPhotoLocation? Location { get; set; }
 

@@ -42,7 +42,7 @@ public class FlickrMatcherService : IFlickrMatcherService
         // Only load photos not yet linked to any species
         var unlinkedPhotos = await _db.FlickrPhotos
             .Where(p => !_db.SpeciesPhotos.Any(sp => sp.FlickrPhotoId == p.Id))
-            .Select(p => new { p.Id, Title = p.Title.ToLower() })
+            .Select(p => new { p.Id, Title = p.Title.ToLower(), Tags = p.Tags != null ? p.Tags.ToLower() : "" })
             .ToListAsync(cancellationToken);
 
         _logger.LogInformation("Found {Count} unlinked photos to process.", unlinkedPhotos.Count);
@@ -54,7 +54,9 @@ public class FlickrMatcherService : IFlickrMatcherService
         {
             foreach (var (sciName, speciesId) in speciesLookup)
             {
-                if (photo.Title.Contains(sciName, StringComparison.OrdinalIgnoreCase))
+                // Match if scientific name is in title OR in tags
+                if (photo.Title.Contains(sciName, StringComparison.OrdinalIgnoreCase) || 
+                    photo.Tags.Contains(sciName, StringComparison.OrdinalIgnoreCase))
                 {
                     var key = (speciesId, photo.Id);
                     if (!matchedPairs.Contains(key))
