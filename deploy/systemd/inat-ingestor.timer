@@ -1,10 +1,10 @@
 [Unit]
-Description=Run iNaturalist Ingestor Worker every 6 hours
+Description=Run iNaturalist Ingestor Worker every 3 hours
 Requires=inat-ingestor.service
 
 [Timer]
 OnBootSec=10min
-OnUnitActiveSec=6h
+OnUnitActiveSec=3h
 Unit=inat-ingestor.service
 
 [Install]
