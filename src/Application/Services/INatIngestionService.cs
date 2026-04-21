@@ -33,8 +33,8 @@ public class INatIngestionService : IINatIngestionService
 
     public async Task ProcessQueueAsync()
     {
-        const int batchSize = 10;
-        var daysAgo = _configuration.GetValue<int>("iNatIngestor:DaysAgo", 30);
+        const int batchSize = 300;
+        var daysAgo = _configuration.GetValue<int>("iNatIngestor:DaysAgo", 180);
         var maxPages = _configuration.GetValue<int>("iNatIngestor:MaxPagesPerCountry", 5);
 
         _logger.LogInformation("Starting iNat ingestion. Batch size: {BatchSize}.", batchSize);
