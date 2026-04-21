@@ -180,7 +180,9 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: inat-ingestor-app
-        path: publish/inat-ingestor
+        path: |
+          publish/inat-ingestor
+          deploy/systemd/inat-ingestor.*
 
   # ─────────────────────────────────────────────────────────────
   # DEPLOY — eBird Ingestor
@@ -415,14 +417,24 @@ jobs:
         source: "app/."
         target: "/APPS/inat-ingestor"
 
-    - name: Set permissions
+    - name: Set permissions and reload systemd
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.LINODE_HOST }}
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
+          # 1. Update app permissions
           DEPLOY_PATH="/APPS/inat-ingestor/app"
           sudo chown -R root:root $DEPLOY_PATH
           sudo chmod -R 755 $DEPLOY_PATH
+
+          # 2. Deploy systemd files
+          SYSTEMD_SRC="/APPS/inat-ingestor/deploy/systemd"
+          sudo cp $SYSTEMD_SRC/inat-ingestor.service /etc/systemd/system/
+          sudo cp $SYSTEMD_SRC/inat-ingestor.timer /etc/systemd/system/
+
+          # 3. Reload and restart timer
           sudo systemctl daemon-reload
+          sudo systemctl enable inat-ingestor.timer
+          sudo systemctl restart inat-ingestor.timer
