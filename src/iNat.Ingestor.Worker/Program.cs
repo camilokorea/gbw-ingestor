@@ -1,6 +1,8 @@
 using eBird.Ingestor.Application.Contracts;
 using eBird.Ingestor.Application.Services;
 using Microsoft.EntityFrameworkCore;
+using eBird.Ingestor.Infrastructure;
+using eBird.Ingestor.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

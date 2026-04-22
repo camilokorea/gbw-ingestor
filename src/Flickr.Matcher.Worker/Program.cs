@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using eBird.Ingestor.Infrastructure;
+using Flickr.Matcher.Application;
+using Flickr.Matcher.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
