@@ -16,6 +16,37 @@ public class INatPhotoService : IINatPhotoService
         _logger = logger;
     }
 
+    public async Task<long?> SearchTaxonIdByNameAsync(string scientificName, CancellationToken cancellationToken = default)
+    {
+        var client = _httpClientFactory.CreateClient("INat");
+        var encoded = Uri.EscapeDataString(scientificName);
+        var url = $"https://api.inaturalist.org/v1/taxa?q={encoded}&rank=species&per_page=1";
+
+        try
+        {
+            var response = await client.GetAsync(url, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = JsonDocument.Parse(json);
+
+            var results = doc.RootElement.GetProperty("results");
+            if (results.GetArrayLength() == 0) return null;
+
+            var first = results[0];
+            // Verify name matches to avoid false positives
+            var name = GetString(first, "name");
+            if (!name.Equals(scientificName, StringComparison.OrdinalIgnoreCase)) return null;
+
+            return first.GetProperty("id").GetInt64();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching iNat taxon for {Name}", scientificName);
+            return null;
+        }
+    }
+
     public async Task<List<INatPhoto>> GetPhotosForTaxonAsync(long taxonId, CancellationToken cancellationToken = default)
     {
         var client = _httpClientFactory.CreateClient("INat");
