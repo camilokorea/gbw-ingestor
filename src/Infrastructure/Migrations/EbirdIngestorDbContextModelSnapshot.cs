@@ -472,6 +472,22 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.ToTable("States");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.SyncState", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<long>("LastSyncValue")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("SyncStates");
+                });
+
             modelBuilder.Entity("Sound.Ingestor.Domain.SoundSignature", b =>
                 {
                     b.HasOne("eBird.Ingestor.Domain.Species", "Species")

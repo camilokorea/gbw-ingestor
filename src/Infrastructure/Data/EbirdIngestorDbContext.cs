@@ -28,6 +28,9 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
     // Color data
     public DbSet<SpeciesColor> SpeciesColors { get; set; }
 
+    // Sync state
+    public DbSet<SyncState> SyncStates { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

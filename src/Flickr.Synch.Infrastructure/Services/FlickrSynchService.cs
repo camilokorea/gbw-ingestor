@@ -38,28 +38,46 @@ public class FlickrSynchService : IFlickrSynchService
         var groups = _configuration.GetSection("FlickrApi:Groups").Get<string[]>()
             ?? throw new InvalidOperationException("FlickrApi:Groups is not configured.");
 
+        // 1. Get last sync timestamp (Unix)
+        var syncState = await _db.SyncStates.FirstOrDefaultAsync(s => s.Key == "Flickr_LastSync", cancellationToken);
+        var minUploadDate = syncState?.LastSyncValue ?? 1711843200; // Default to Apr 1, 2024 if never run
+        var currentSyncStart = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
         var existingPhotoIds = await _db.FlickrPhotos
             .Select(p => p.PhotoId)
             .ToHashSetAsync(cancellationToken);
 
-        _logger.LogInformation("Loaded {Count} existing photos from database.", existingPhotoIds.Count);
+        _logger.LogInformation("Loaded {Count} existing photos. Syncing since Unix={MinDate}", existingPhotoIds.Count, minUploadDate);
 
         var totalInserted = 0;
 
         foreach (var groupId in groups)
         {
             _logger.LogInformation("Processing Flickr group: {GroupId}", groupId);
-            var inserted = await ProcessGroupAsync(groupId, apiKey, pageSize, existingPhotoIds, cancellationToken);
+            var inserted = await ProcessGroupAsync(groupId, apiKey, pageSize, minUploadDate, existingPhotoIds, cancellationToken);
             totalInserted += inserted;
         }
 
-        _logger.LogInformation("Sync complete. Total photos inserted: {Count}", totalInserted);
+        // 2. Update last sync timestamp
+        if (syncState == null)
+        {
+            _db.SyncStates.Add(new SyncState { Key = "Flickr_LastSync", LastSyncValue = currentSyncStart });
+        }
+        else
+        {
+            syncState.LastSyncValue = currentSyncStart;
+            syncState.UpdatedAt = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Sync complete. Total photos inserted: {Count}. Next sync will start from {Time}", totalInserted, currentSyncStart);
     }
 
     private async Task<int> ProcessGroupAsync(
         string groupId,
         string apiKey,
         int pageSize,
+        long minUploadDate,
         HashSet<long> existingPhotoIds,
         CancellationToken cancellationToken)
     {
@@ -74,6 +92,7 @@ public class FlickrSynchService : IFlickrSynchService
                       $"?method=flickr.groups.pools.getPhotos" +
                       $"&api_key={apiKey}" +
                       $"&group_id={groupId}" +
+                      $"&min_upload_date={minUploadDate}" +
                       $"&extras=url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o,owner_name,path_alias,tags" +
                       $"&per_page={pageSize}" +
                       $"&page={page}" +
