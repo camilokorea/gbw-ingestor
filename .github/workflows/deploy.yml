@@ -204,9 +204,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: inat-photo-app
-        path: |
-          publish/inat-photo
-          deploy/systemd/inat-photo.*
+        path: publish/inat-photo
 
   # ─────────────────────────────────────────────────────────────
   # DEPLOY — eBird Ingestor
@@ -482,38 +480,60 @@ jobs:
         name: inat-photo-app
         path: ./app
 
-    - name: Copy to Linode
+    - name: Copy app to Linode
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.LINODE_HOST }}
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/inat-photo"
+        target: "/APPS/inat-photo/app"
+        strip_components: 1
 
-    - name: Set permissions and reload systemd
+    - name: Install systemd units and restart timer
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.LINODE_HOST }}
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
-          # 1. Update app permissions (re-map path to correct publish location)
-          DEPLOY_PATH="/APPS/inat-photo/app"
-          APP_SRC="/APPS/inat-photo/publish/inat-photo"
-          
-          sudo mkdir -p $DEPLOY_PATH
-          sudo cp -r $APP_SRC/. $DEPLOY_PATH/
-          
-          sudo chown -R root:root $DEPLOY_PATH
-          sudo chmod -R 755 $DEPLOY_PATH
+          # 1. Permissions
+          sudo chown -R root:root /APPS/inat-photo/app
+          sudo chmod -R 755 /APPS/inat-photo/app
 
-          # 2. Deploy systemd files
-          SYSTEMD_SRC="/APPS/inat-photo/deploy/systemd"
-          sudo cp $SYSTEMD_SRC/inat-photo.service /etc/systemd/system/
-          sudo cp $SYSTEMD_SRC/inat-photo.timer /etc/systemd/system/
+          # 2. Write systemd service file
+          sudo tee /etc/systemd/system/inat-photo.service > /dev/null << 'EOF'
+          [Unit]
+          Description=GBW iNaturalist Photo Worker -- downloads bird photos from iNat observations.
+          After=network.target
 
-          # 3. Reload and restart timer
+          [Service]
+          Type=oneshot
+          WorkingDirectory=/APPS/inat-photo/app
+          ExecStart=/usr/bin/dotnet /APPS/inat-photo/app/INat.Photo.Worker.dll
+          User=root
+          Group=root
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          # 3. Write systemd timer file
+          sudo tee /etc/systemd/system/inat-photo.timer > /dev/null << 'EOF'
+          [Unit]
+          Description=Timer for GBW iNaturalist Photo Worker
+          After=network.target
+
+          [Timer]
+          OnBootSec=5min
+          OnUnitActiveSec=4h
+          RandomizedDelaySec=5min
+
+          [Install]
+          WantedBy=timers.target
+          EOF
+
+          # 4. Reload and enable
           sudo systemctl daemon-reload
           sudo systemctl enable inat-photo.timer
           sudo systemctl restart inat-photo.timer
