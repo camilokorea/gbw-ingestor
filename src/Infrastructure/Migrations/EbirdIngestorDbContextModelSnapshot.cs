@@ -227,6 +227,62 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.ToTable("FlickrPhotoLocations");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.INatPhoto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Attribution")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("INatObservationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("LargeUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LicenseCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MediumUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OriginalUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("PhotoId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SmallUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SquareUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WebUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PhotoId")
+                        .IsUnique();
+
+                    b.ToTable("INatPhotos");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.IngestionQueue", b =>
                 {
                     b.Property<int>("Id")
@@ -400,6 +456,24 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.ToTable("SpeciesColors");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesINatPhoto", b =>
+                {
+                    b.Property<int>("SpeciesId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("INatPhotoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("int");
+
+                    b.HasKey("SpeciesId", "INatPhotoId");
+
+                    b.HasIndex("INatPhotoId");
+
+                    b.ToTable("SpeciesINatPhotos");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesPhoto", b =>
                 {
                     b.Property<int>("SpeciesId")
@@ -557,6 +631,25 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.Navigation("Species");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesINatPhoto", b =>
+                {
+                    b.HasOne("eBird.Ingestor.Domain.INatPhoto", "INatPhoto")
+                        .WithMany("SpeciesPhotos")
+                        .HasForeignKey("INatPhotoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("eBird.Ingestor.Domain.Species", "Species")
+                        .WithMany()
+                        .HasForeignKey("SpeciesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("INatPhoto");
+
+                    b.Navigation("Species");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesPhoto", b =>
                 {
                     b.HasOne("eBird.Ingestor.Domain.FlickrPhoto", "FlickrPhoto")
@@ -609,6 +702,11 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                 {
                     b.Navigation("Location");
 
+                    b.Navigation("SpeciesPhotos");
+                });
+
+            modelBuilder.Entity("eBird.Ingestor.Domain.INatPhoto", b =>
+                {
                     b.Navigation("SpeciesPhotos");
                 });
 

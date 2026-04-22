@@ -12,6 +12,14 @@ public interface IApplicationDbContext
     DbSet<State> States { get; }
     DbSet<IngestionQueue> IngestionQueue { get; }
     DbSet<Sound.Ingestor.Domain.SoundSignature> SoundSignatures { get; }
+    DbSet<SpeciesTranslation> SpeciesTranslations { get; }
+    DbSet<FlickrPhoto> FlickrPhotos { get; }
+    DbSet<FlickrPhotoLocation> FlickrPhotoLocations { get; }
+    DbSet<SpeciesPhoto> SpeciesPhotos { get; }
+    DbSet<SpeciesColor> SpeciesColors { get; }
+    DbSet<SyncState> SyncStates { get; }
+    DbSet<INatPhoto> INatPhotos { get; }
+    DbSet<SpeciesINatPhoto> SpeciesINatPhotos { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

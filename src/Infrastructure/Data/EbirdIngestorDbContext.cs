@@ -31,6 +31,10 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
     // Sync state
     public DbSet<SyncState> SyncStates { get; set; }
 
+    // iNaturalist photos
+    public DbSet<INatPhoto> INatPhotos { get; set; }
+    public DbSet<SpeciesINatPhoto> SpeciesINatPhotos { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -143,6 +147,26 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
             entity.HasOne(sc => sc.Species)
                 .WithMany()
                 .HasForeignKey(sc => sc.SpeciesId);
+        });
+
+        // ── iNaturalist entities ───────────────────────────────────────────
+
+        modelBuilder.Entity<INatPhoto>(entity =>
+        {
+            entity.HasIndex(p => p.PhotoId).IsUnique();
+        });
+
+        modelBuilder.Entity<SpeciesINatPhoto>(entity =>
+        {
+            entity.HasKey(sp => new { sp.SpeciesId, sp.INatPhotoId });
+
+            entity.HasOne(sp => sp.Species)
+                .WithMany()
+                .HasForeignKey(sp => sp.SpeciesId);
+
+            entity.HasOne(sp => sp.INatPhoto)
+                .WithMany(p => p.SpeciesPhotos)
+                .HasForeignKey(sp => sp.INatPhotoId);
         });
     }
 }
