@@ -6,7 +6,8 @@ The solution is composed of three main ingestion processes:
 1.  **eBird Ingestor**: Fetches recent bird observations from the eBird API.
 2.  **iNat Ingestor**: Fetches biodiversity observations from the iNaturalist API.
 3.  **Sound Ingestor**: Fetches bird sound recordings from the Xeno-Canto API.
-4.  **Taxonomy Backfill**: A custom localized utility (`tools/TaxonomyBackfill`) that hits the eBird Taxonomy API to automatically map and hydrate authentic biological taxonomy (Order, Families) straight into the database.
+4.  **Flickr Workers**: A suite of specialized workers (`Synch`, `Matcher`, `Geo`, `Eraser`) that manage the global bird photo library by syncing millions of images from high-authority Flickr groups (like Cornell's Birdshare) and matching them to species using advanced Title + Tag logic.
+5.  **Taxonomy Backfill**: A custom localized utility (`tools/TaxonomyBackfill`) that hits the eBird Taxonomy API to automatically map and hydrate authentic biological taxonomy (Order, Families) straight into the database.
 
 ---
 
@@ -57,6 +58,8 @@ The application's entry points. They are .NET Console projects that compose the 
 - **eBird.Ingestor.Worker**: Executes the eBird observation ingestion.
 - **iNat.Ingestor.Worker**: Executes the iNaturalist observation ingestion.
 - **Sound.Ingestor.Worker**: Executes the sound recording ingestion.
+- **Flickr.Synch.Worker**: Downloads bird photos from global Flickr pools.
+- **Flickr.Matcher.Worker**: Links downloaded photos to species using scientific name matching in titles and tags.
 
 ## Tech Stack
 
@@ -91,12 +94,14 @@ Follow these steps to set up and run the project in your local environment.
 
 ### Running the Application
 
-1.  **Apply database migrations:**
-    -   Open a terminal at the project root.
-    -   Run the following command to have Entity Framework create and update the database schema:
-        ```sh
-        dotnet ef database update --project src/Infrastructure --startup-project src/Worker
-        ```
+1.  **Automatic Migrations (Recommended):**
+    The workers are configured to automatically apply database migrations on startup. Simply running any worker will ensure the database schema is up-to-date.
+
+2.  **Manual Update:**
+    Run the following command to have Entity Framework create and update the database schema:
+    ```sh
+    dotnet ef database update --project src/Infrastructure --startup-project src/iNat.Ingestor.Worker
+    ```
 
 2.  **Run the Ingestors:**
     -   The two ingestors can be run independently. Open a terminal at the project root for each one.
