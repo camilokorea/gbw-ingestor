@@ -29,11 +29,13 @@ public class INatPhotoIngestionService : IINatPhotoIngestionService
 
     public async Task ProcessSpeciesPhotosAsync(CancellationToken cancellationToken = default)
     {
-        // Find species that have no iNat photos yet — regardless of whether they have a TaxonId yet
+        // Find species with no photos, ordered by how many actual observations exist
+        // This ensures species users are actively seeing (like Philodice bryantae)
+        // get processed before obscure species that have never been recorded.
         var speciesToFix = await _db.Species
             .Where(s => !_db.SpeciesPhotos.Any(sp => sp.SpeciesId == s.Id))
             .Where(s => !_db.SpeciesINatPhotos.Any(sp => sp.SpeciesId == s.Id))
-            .OrderByDescending(s => s.ObservationCount)
+            .OrderByDescending(s => _db.Observations.Count(o => o.SpeciesId == s.Id))
             .Take(100)
             .ToListAsync(cancellationToken);
 
