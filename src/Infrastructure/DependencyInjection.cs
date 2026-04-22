@@ -1,5 +1,7 @@
+using eBird.Ingestor.Application.Contracts;
 using eBird.Ingestor.Application.Contracts.Persistence;
 using eBird.Ingestor.Infrastructure.Data;
+using eBird.Ingestor.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +25,11 @@ public static class DependencyInjection
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<EbirdIngestorDbContext>());
         services.AddScoped<eBird.Ingestor.Application.Contracts.IINatPhotoService, Services.INatPhotoService>();
+
+        // Telemetry & alerting — registered once here, available in all workers
+        services.AddHttpClient();
+        services.AddSingleton<TelegramAlertService>();
+        services.AddScoped<IWorkerTelemetry, WorkerTelemetryService>();
 
         return services;
     }

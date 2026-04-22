@@ -18,21 +18,23 @@ public class Program
 
         using var scope = host.Services.CreateScope();
         var services = scope.ServiceProvider;
+        var telemetry = services.GetRequiredService<eBird.Ingestor.Application.Contracts.IWorkerTelemetry>();
+        var runId = await telemetry.StartAsync("flickr-matcher");
 
         try
         {
-            // Automatic migration on startup
             var dbContext = services.GetRequiredService<eBird.Ingestor.Infrastructure.Data.EbirdIngestorDbContext>();
             await dbContext.Database.MigrateAsync();
 
             var matcherService = services.GetRequiredService<IFlickrMatcherService>();
             await matcherService.MatchPhotosToSpeciesAsync();
+            await telemetry.CompleteAsync(runId);
             Console.WriteLine("Flickr Matcher Worker completed successfully.");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Fatal error in Flickr Matcher Worker: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
+            await telemetry.FailAsync(runId, ex);
             Environment.Exit(1);
         }
     }

@@ -17,19 +17,23 @@ public class Program
 
         using var scope = host.Services.CreateScope();
         var services = scope.ServiceProvider;
+        var telemetry = services.GetRequiredService<eBird.Ingestor.Application.Contracts.IWorkerTelemetry>();
+        var runId = await telemetry.StartAsync("sound-ingestor");
 
         try
         {
             var ingestionService = services.GetRequiredService<ISoundIngestionService>();
             await ingestionService.ProcessSoundsAsync();
+            await telemetry.CompleteAsync(runId);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ha ocurrido un error fatal en la ejecución: {ex.Message}");
-            // Consider using a logger here in a real application
+            Console.WriteLine($"Fatal error in Sound Ingestor Worker: {ex.Message}");
+            await telemetry.FailAsync(runId, ex);
+            Environment.Exit(1);
         }
 
-        Console.WriteLine("Proceso de ingestión de sonidos finalizado.");
+        Console.WriteLine("Sound Ingestor Worker completed.");
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>

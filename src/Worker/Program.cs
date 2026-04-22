@@ -23,6 +23,7 @@ public class Program
         using var scope = host.Services.CreateScope();
         var services = scope.ServiceProvider;
         var seeder = services.GetRequiredService<IQueueSeederService>();
+        var telemetry = services.GetRequiredService<eBird.Ingestor.Application.Contracts.IWorkerTelemetry>();
 
         if (args.Contains("--seed-queue"))
         {
@@ -30,41 +31,32 @@ public class Program
             return;
         }
 
+        var runId = await telemetry.StartAsync("ebird-ingestor");
+
         Console.WriteLine("Host creado. El programa se iniciará.");
 
         try
         {
-            // --- Diagnostic Block Start ---
             var httpClientFactory = services.GetService<IHttpClientFactory>();
             var configuration = services.GetService<IConfiguration>();
 
-            if (httpClientFactory == null)
-            {
-                Console.WriteLine("ERROR: IHttpClientFactory could not be resolved.");
-            }
-            else
-            {
-                Console.WriteLine("IHttpClientFactory resolved successfully.");
-            }
+            if (httpClientFactory == null) Console.WriteLine("ERROR: IHttpClientFactory could not be resolved.");
+            else Console.WriteLine("IHttpClientFactory resolved successfully.");
 
-            if (configuration == null)
-            {
-                Console.WriteLine("ERROR: IConfiguration could not be resolved.");
-            }
-            else
-            {
-                Console.WriteLine("IConfiguration resolved successfully.");
-            }
-            // --- Diagnostic Block End ---
+            if (configuration == null) Console.WriteLine("ERROR: IConfiguration could not be resolved.");
+            else Console.WriteLine("IConfiguration resolved successfully.");
+
             var processedQueue = await seeder.CheckQueueCompletedAsync();
             var ingestionService = services.GetRequiredService<IIngestionService>();
             if (!processedQueue)
                 await seeder.SeedQueueAsync();
             await ingestionService.ProcessQueueAsync();
+            await telemetry.CompleteAsync(runId);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ha ocurrido un error fatal en la ejecución: {ex.Message}");
+            Console.WriteLine($"Fatal error in eBird Ingestor Worker: {ex.Message}");
+            await telemetry.FailAsync(runId, ex);
         }
     }
 

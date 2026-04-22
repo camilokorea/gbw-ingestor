@@ -17,17 +17,20 @@ public class Program
 
         using var scope = host.Services.CreateScope();
         var services = scope.ServiceProvider;
+        var telemetry = services.GetRequiredService<eBird.Ingestor.Application.Contracts.IWorkerTelemetry>();
+        var runId = await telemetry.StartAsync("flickr-eraser");
 
         try
         {
             var eraserService = services.GetRequiredService<IFlickrEraserService>();
             await eraserService.EraseDeletedPhotosAsync();
+            await telemetry.CompleteAsync(runId);
             Console.WriteLine("Flickr Eraser Worker completed successfully.");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Fatal error in Flickr Eraser Worker: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
+            await telemetry.FailAsync(runId, ex);
             Environment.Exit(1);
         }
     }

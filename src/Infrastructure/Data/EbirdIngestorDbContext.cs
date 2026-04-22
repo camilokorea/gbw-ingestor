@@ -35,6 +35,9 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
     public DbSet<INatPhoto> INatPhotos { get; set; }
     public DbSet<SpeciesINatPhoto> SpeciesINatPhotos { get; set; }
 
+    // Operations dashboard
+    public DbSet<WorkerRun> WorkerRuns { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -167,6 +170,13 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
             entity.HasOne(sp => sp.INatPhoto)
                 .WithMany(p => p.SpeciesPhotos)
                 .HasForeignKey(sp => sp.INatPhotoId);
+        });
+
+        // ── Operations dashboard ───────────────────────────────────────────
+
+        modelBuilder.Entity<WorkerRun>(entity =>
+        {
+            entity.HasIndex(r => new { r.WorkerName, r.StartedAt });
         });
     }
 }

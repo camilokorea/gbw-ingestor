@@ -568,6 +568,44 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.ToTable("SyncStates");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.WorkerRun", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ErrorDetail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RecordsProcessed")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WorkerName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkerName", "StartedAt");
+
+                    b.ToTable("WorkerRuns");
+                });
+
             modelBuilder.Entity("Sound.Ingestor.Domain.SoundSignature", b =>
                 {
                     b.HasOne("eBird.Ingestor.Domain.Species", "Species")

@@ -20,22 +20,24 @@ public class Program
 
         using var scope = host.Services.CreateScope();
         var services = scope.ServiceProvider;
+        var telemetry = services.GetRequiredService<IWorkerTelemetry>();
+        var runId = await telemetry.StartAsync("inat-photo");
 
         try
         {
-            // Automatic migration on startup
             var dbContext = services.GetRequiredService<EbirdIngestorDbContext>();
             await dbContext.Database.MigrateAsync();
 
             var ingestionService = services.GetRequiredService<IINatPhotoIngestionService>();
             await ingestionService.ProcessSpeciesPhotosAsync();
 
+            await telemetry.CompleteAsync(runId);
             Console.WriteLine("iNaturalist Photo Worker completed successfully.");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Fatal error in iNaturalist Photo Worker: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
+            await telemetry.FailAsync(runId, ex);
             Environment.Exit(1);
         }
     }

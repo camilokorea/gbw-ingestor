@@ -42,11 +42,15 @@ jobs:
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         EBIRD_API_KEY: ${{ secrets.EBIRD_API_KEY }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
         sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/ebird/appsettings.json
         sed -i "s#YOUR_USER#$DB_USER#g"             publish/ebird/appsettings.json
         sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"     publish/ebird/appsettings.json
         sed -i "s#YOUR_EBIRD_API_KEY#$EBIRD_API_KEY#g" publish/ebird/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_BOT_TOKEN#$TELEGRAM_BOT_TOKEN#g" publish/ebird/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_CHAT_ID#$TELEGRAM_CHAT_ID#g"     publish/ebird/appsettings.json
 
     - name: Upload eBird artifact
       uses: actions/upload-artifact@v4
@@ -63,10 +67,14 @@ jobs:
         DB_SERVER: ${{ secrets.DB_SERVER }}
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
         sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/sound/appsettings.json
         sed -i "s#YOUR_USER#$DB_USER#g"              publish/sound/appsettings.json
         sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/sound/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_BOT_TOKEN#$TELEGRAM_BOT_TOKEN#g" publish/sound/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_CHAT_ID#$TELEGRAM_CHAT_ID#g"     publish/sound/appsettings.json
 
     - name: Upload Sound artifact
       uses: actions/upload-artifact@v4
@@ -85,12 +93,16 @@ jobs:
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         FLICKR_API_KEY: ${{ secrets.FLICKR_API_KEY }}
         FLICKR_API_SECRET: ${{ secrets.FLICKR_API_SECRET }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
         sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g"       publish/flickr-synch/appsettings.json
         sed -i "s#YOUR_USER#$DB_USER#g"                    publish/flickr-synch/appsettings.json
         sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"            publish/flickr-synch/appsettings.json
         sed -i "s#YOUR_FLICKR_API_KEY#$FLICKR_API_KEY#g"  publish/flickr-synch/appsettings.json
         sed -i "s#YOUR_FLICKR_API_SECRET#$FLICKR_API_SECRET#g" publish/flickr-synch/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_BOT_TOKEN#$TELEGRAM_BOT_TOKEN#g" publish/flickr-synch/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_CHAT_ID#$TELEGRAM_CHAT_ID#g"     publish/flickr-synch/appsettings.json
 
     - name: Upload Flickr Synch artifact
       uses: actions/upload-artifact@v4
@@ -107,10 +119,14 @@ jobs:
         DB_SERVER: ${{ secrets.DB_SERVER }}
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
         sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/flickr-eraser/appsettings.json
         sed -i "s#YOUR_USER#$DB_USER#g"              publish/flickr-eraser/appsettings.json
         sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/flickr-eraser/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_BOT_TOKEN#$TELEGRAM_BOT_TOKEN#g" publish/flickr-eraser/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_CHAT_ID#$TELEGRAM_CHAT_ID#g"     publish/flickr-eraser/appsettings.json
 
     - name: Upload Flickr Eraser artifact
       uses: actions/upload-artifact@v4
@@ -129,12 +145,16 @@ jobs:
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         FLICKR_API_KEY: ${{ secrets.FLICKR_API_KEY }}
         FLICKR_API_SECRET: ${{ secrets.FLICKR_API_SECRET }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
         sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g"       publish/flickr-geo/appsettings.json
         sed -i "s#YOUR_USER#$DB_USER#g"                    publish/flickr-geo/appsettings.json
         sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"            publish/flickr-geo/appsettings.json
         sed -i "s#YOUR_FLICKR_API_KEY#$FLICKR_API_KEY#g"  publish/flickr-geo/appsettings.json
         sed -i "s#YOUR_FLICKR_API_SECRET#$FLICKR_API_SECRET#g" publish/flickr-geo/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_BOT_TOKEN#$TELEGRAM_BOT_TOKEN#g" publish/flickr-geo/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_CHAT_ID#$TELEGRAM_CHAT_ID#g"     publish/flickr-geo/appsettings.json
 
     - name: Upload Flickr Geo artifact
       uses: actions/upload-artifact@v4
@@ -151,10 +171,14 @@ jobs:
         DB_SERVER: ${{ secrets.DB_SERVER }}
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
         sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/flickr-matcher/appsettings.json
         sed -i "s#YOUR_USER#$DB_USER#g"              publish/flickr-matcher/appsettings.json
         sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/flickr-matcher/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_BOT_TOKEN#$TELEGRAM_BOT_TOKEN#g" publish/flickr-matcher/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_CHAT_ID#$TELEGRAM_CHAT_ID#g"     publish/flickr-matcher/appsettings.json
 
     - name: Upload Flickr Matcher artifact
       uses: actions/upload-artifact@v4
@@ -171,10 +195,14 @@ jobs:
         DB_SERVER: ${{ secrets.DB_SERVER }}
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
         sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/inat-ingestor/appsettings.json
         sed -i "s#YOUR_USER#$DB_USER#g"              publish/inat-ingestor/appsettings.json
         sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/inat-ingestor/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_BOT_TOKEN#$TELEGRAM_BOT_TOKEN#g" publish/inat-ingestor/appsettings.json
+        sed -i "s#YOUR_TELEGRAM_CHAT_ID#$TELEGRAM_CHAT_ID#g"     publish/inat-ingestor/appsettings.json
 
     - name: Upload iNat Ingestor artifact
       uses: actions/upload-artifact@v4
@@ -195,6 +223,8 @@ jobs:
         DB_SERVER: ${{ secrets.DB_SERVER }}
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
         sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/inat-photo/appsettings.json
         sed -i "s#YOUR_USER#$DB_USER#g"              publish/inat-photo/appsettings.json

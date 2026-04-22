@@ -21,10 +21,11 @@ public class Program
 
         using var scope = host.Services.CreateScope();
         var services = scope.ServiceProvider;
+        var telemetry = services.GetRequiredService<eBird.Ingestor.Application.Contracts.IWorkerTelemetry>();
+        var runId = await telemetry.StartAsync("inat-ingestor");
 
         try
         {
-            // Automatic migration on startup
             var dbContext = services.GetRequiredService<eBird.Ingestor.Infrastructure.Data.EbirdIngestorDbContext>();
             await dbContext.Database.MigrateAsync();
             var seeder = services.GetRequiredService<IINatQueueSeederService>();
@@ -33,6 +34,7 @@ public class Program
             if (args.Contains("--seed-queue"))
             {
                 await seeder.SeedQueueAsync();
+                await telemetry.CompleteAsync(runId);
                 return;
             }
 
@@ -41,13 +43,13 @@ public class Program
                 await seeder.SeedQueueAsync();
 
             await ingestionService.ProcessQueueAsync();
-
+            await telemetry.CompleteAsync(runId);
             Console.WriteLine("iNat Ingestor Worker completed successfully.");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Fatal error in iNat Ingestor Worker: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
+            await telemetry.FailAsync(runId, ex);
             Environment.Exit(1);
         }
     }
