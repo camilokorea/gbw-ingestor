@@ -448,8 +448,13 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
-          # 1. Update app permissions
+          # 1. Update app permissions (re-map path to correct publish location)
           DEPLOY_PATH="/APPS/inat-ingestor/app"
+          APP_SRC="/APPS/inat-ingestor/publish/inat-ingestor"
+          
+          sudo mkdir -p $DEPLOY_PATH
+          sudo cp -r $APP_SRC/. $DEPLOY_PATH/
+          
           sudo chown -R root:root $DEPLOY_PATH
           sudo chmod -R 755 $DEPLOY_PATH
 
@@ -493,8 +498,13 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
-          # 1. Update app permissions
+          # 1. Update app permissions (re-map path to correct publish location)
           DEPLOY_PATH="/APPS/inat-photo/app"
+          APP_SRC="/APPS/inat-photo/publish/inat-photo"
+          
+          sudo mkdir -p $DEPLOY_PATH
+          sudo cp -r $APP_SRC/. $DEPLOY_PATH/
+          
           sudo chown -R root:root $DEPLOY_PATH
           sudo chmod -R 755 $DEPLOY_PATH
 
