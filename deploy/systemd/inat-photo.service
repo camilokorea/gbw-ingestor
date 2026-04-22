@@ -1,0 +1,13 @@
+[Unit]
+Description=GBW iNaturalist Photo Worker — downloads bird photos from iNat observations.
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/APPS/inat-photo/app
+ExecStart=/usr/bin/dotnet /APPS/inat-photo/app/INat.Photo.Worker.dll
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

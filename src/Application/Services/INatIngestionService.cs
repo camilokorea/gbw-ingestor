@@ -113,6 +113,11 @@ public class INatIngestionService : IINatIngestionService
                                 HowMany = Math.Max(1, dto.NumIdentificationAgreements),
                                 Source = "inat"
                             });
+                            
+                            species.ObservationCount++;
+                            if (species.INatTaxonId == null)
+                                species.INatTaxonId = dto.Taxon.Id;
+
                             totalIngested++;
                         }
                     }

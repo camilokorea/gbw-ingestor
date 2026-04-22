@@ -399,6 +399,12 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.Property<string>("FamilySciName")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<long?>("INatTaxonId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("ObservationCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("Order")
                         .HasColumnType("nvarchar(max)");
 

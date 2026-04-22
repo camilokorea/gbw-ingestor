@@ -22,6 +22,7 @@ public static class DependencyInjection
                 }));
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<EbirdIngestorDbContext>());
+        services.AddScoped<eBird.Ingestor.Application.Contracts.IINatPhotoService, Services.INatPhotoService>();
 
         return services;
     }

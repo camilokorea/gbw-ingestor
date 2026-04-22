@@ -41,6 +41,16 @@ public class Species
     public string? FamilyComName { get; set; }
 
     /// <summary>
+    /// Total number of observations recorded for this species. Cached for performance.
+    /// </summary>
+    public int ObservationCount { get; set; }
+
+    /// <summary>
+    /// Identifier of the taxon in iNaturalist.
+    /// </summary>
+    public long? INatTaxonId { get; set; }
+
+    /// <summary>
     /// Colección de observaciones para esta especie.
     /// </summary>
     public ICollection<Observation> Observations { get; set; } = new List<Observation>();

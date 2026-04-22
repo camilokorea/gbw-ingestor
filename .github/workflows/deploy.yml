@@ -183,6 +183,27 @@ jobs:
         path: |
           publish/inat-ingestor
           deploy/systemd/inat-ingestor.*
+    # ── iNat Photo ──────────────────────────────────────────────
+    - name: Publish iNat Photo Worker
+      run: dotnet publish src/INat.Photo.Worker/INat.Photo.Worker.csproj --configuration Release --no-build --output publish/inat-photo
+
+    - name: Inject secrets into iNat Photo appsettings
+      env:
+        DB_SERVER: ${{ secrets.DB_SERVER }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      run: |
+        sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/inat-photo/appsettings.json
+        sed -i "s#YOUR_USER#$DB_USER#g"              publish/inat-photo/appsettings.json
+        sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/inat-photo/appsettings.json
+
+    - name: Upload iNat Photo artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: inat-photo-app
+        path: |
+          publish/inat-photo
+          deploy/systemd/inat-photo.*
 
   # ─────────────────────────────────────────────────────────────
   # DEPLOY — eBird Ingestor
@@ -438,3 +459,48 @@ jobs:
           sudo systemctl daemon-reload
           sudo systemctl enable inat-ingestor.timer
           sudo systemctl restart inat-ingestor.timer
+
+  # ─────────────────────────────────────────────────────────────
+  # DEPLOY — iNat Photo Worker
+  # ─────────────────────────────────────────────────────────────
+  deploy-inat-photo:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download iNat Photo artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: inat-photo-app
+        path: ./app
+
+    - name: Copy to Linode
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        source: "app/."
+        target: "/APPS/inat-photo"
+
+    - name: Set permissions and reload systemd
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        script: |
+          # 1. Update app permissions
+          DEPLOY_PATH="/APPS/inat-photo/app"
+          sudo chown -R root:root $DEPLOY_PATH
+          sudo chmod -R 755 $DEPLOY_PATH
+
+          # 2. Deploy systemd files
+          SYSTEMD_SRC="/APPS/inat-photo/deploy/systemd"
+          sudo cp $SYSTEMD_SRC/inat-photo.service /etc/systemd/system/
+          sudo cp $SYSTEMD_SRC/inat-photo.timer /etc/systemd/system/
+
+          # 3. Reload and restart timer
+          sudo systemctl daemon-reload
+          sudo systemctl enable inat-photo.timer
+          sudo systemctl restart inat-photo.timer

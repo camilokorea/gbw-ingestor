@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer for GBW iNaturalist Photo Worker
+After=network.target
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=4h
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
