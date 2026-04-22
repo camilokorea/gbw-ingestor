@@ -187,6 +187,9 @@ jobs:
     - name: Publish iNat Photo Worker
       run: dotnet publish src/INat.Photo.Worker/INat.Photo.Worker.csproj --configuration Release --no-build --output publish/inat-photo
 
+    - name: Rename iNat Photo appsettings template
+      run: mv publish/inat-photo/appsettings.template.json publish/inat-photo/appsettings.json
+
     - name: Inject secrets into iNat Photo appsettings
       env:
         DB_SERVER: ${{ secrets.DB_SERVER }}
