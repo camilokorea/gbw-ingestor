@@ -10,8 +10,8 @@ namespace Flickr.Synch.Infrastructure.Services;
 
 public class FlickrSynchService : IFlickrSynchService
 {
-    private static readonly TimeSpan PageDelay = TimeSpan.FromMilliseconds(500);
-    private const int MaxRetries = 5;
+    private static readonly TimeSpan PageDelay = TimeSpan.FromMilliseconds(1500);
+    private const int MaxRetries = 10;
 
     private readonly EbirdIngestorDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
