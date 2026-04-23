@@ -7,6 +7,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Diagnostics;
+using System.IO;
 
 const int MaxPixelSamples = 3000;  // sample per image for fast K-means on 8k+ images
 const int SqlBatchSize = 100;       // VALUES rows per INSERT statement
@@ -40,16 +42,30 @@ if (!Directory.Exists(imageFolder))
 
 logger.LogInformation("Loading species dictionary from database...");
 
-// Build O(1) lookup: lowercase scientific name → species id
-// GroupBy handles any duplicate ScientificName entries in the DB (keeps first)
-var speciesDict = (await db.Species
+// Build O(1) lookup: lowercase scientific name → species data
+var speciesData = await db.Species
     .AsNoTracking()
-    .Select(s => new { s.Id, SciName = s.ScientificName.ToLower() })
-    .ToListAsync())
-    .GroupBy(s => s.SciName)
-    .ToDictionary(g => g.Key, g => g.First().Id);
+    .Select(s => new {
+        s.Id,
+        SciName = s.ScientificName.ToLower(),
+        CommonNames = s.Translations.Select(t => t.CommonName.ToLower()).ToList(),
+        FlickrPhotoUrl = db.SpeciesPhotos.Where(sp => sp.SpeciesId == s.Id).Select(sp => sp.FlickrPhoto.MediumUrl).FirstOrDefault(),
+        INatPhotoUrl = db.SpeciesINatPhotos.Where(sp => sp.SpeciesId == s.Id).Select(sp => sp.INatPhoto.MediumUrl).FirstOrDefault()
+    })
+    .ToListAsync();
 
-logger.LogInformation("Loaded {Count} species.", speciesDict.Count);
+var speciesDict = speciesData
+    .GroupBy(s => s.SciName)
+    .ToDictionary(g => g.Key, g => g.First());
+
+var commonNameDict = speciesData
+    .SelectMany(s => s.CommonNames.Select(cn => new { Name = cn, Species = s }))
+    .GroupBy(x => x.Name)
+    .ToDictionary(g => g.Key, g => g.First().Species);
+
+var processedSpeciesIds = new HashSet<int>();
+
+logger.LogInformation("Loaded {Count} species. Common names mapped: {CommonCount}", speciesDict.Count, commonNameDict.Count);
 
 var imageFiles = Directory.GetFiles(imageFolder, "*.jpg");
 logger.LogInformation("Found {Count} image files to process.", imageFiles.Length);
@@ -61,6 +77,8 @@ var sqlLines = new List<string>
     $"-- Images processed: {imageFiles.Length}, Colors per species: {numColors}",
     $"-- Pixel sample per image: {MaxPixelSamples}",
     "",
+    "DELETE FROM [SpeciesColors];",
+    "DBCC CHECKIDENT ('[SpeciesColors]', RESEED, 0);",
     "SET IDENTITY_INSERT [SpeciesColors] ON;",
     "",
 };
@@ -88,14 +106,34 @@ foreach (var filePath in imageFiles.OrderBy(f => f))
     var genus = Capitalize(parts[^2]);
     var species = Capitalize(parts[^1]);
     var sciName = $"{genus} {species}".ToLower();
+    
+    // Common name = all parts except the last two
+    var commonName = string.Join(" ", parts.Take(parts.Length - 2)).Replace("-", " ").ToLower();
 
-    if (!speciesDict.TryGetValue(sciName, out var speciesId))
+    int speciesId;
+    if (speciesDict.TryGetValue(sciName, out var sData))
     {
-        logger.LogWarning("No DB match for scientific name: '{SciName}' (file: {File})", $"{genus} {species}", fileName);
+        speciesId = sData.Id;
+    }
+    else if (commonNameDict.TryGetValue(commonName, out sData))
+    {
+        speciesId = sData.Id;
+        logger.LogInformation("Matched via common name fallback: '{CommonName}' -> {SciName}", commonName, sData.SciName);
+    }
+    else
+    {
+        logger.LogWarning("No DB match for scientific name: '{SciName}' or common name: '{CommonName}' (file: {File})", $"{genus} {species}", commonName, fileName);
         skipped++;
         continue;
     }
 
+    if (processedSpeciesIds.Contains(speciesId))
+    {
+        logger.LogWarning("SpeciesId={Id} already processed (multiple images found for same species). Skipping: {File}", speciesId, fileName);
+        continue;
+    }
+
+    processedSpeciesIds.Add(speciesId);
     logger.LogInformation("Processing [{SciName}] → SpeciesId={Id}", $"{genus} {species}", speciesId);
 
     List<(byte R, byte G, byte B, double Pct)> colors;
@@ -120,6 +158,70 @@ foreach (var filePath in imageFiles.OrderBy(f => f))
     matched++;
 }
 
+// ── Handle Missing Species via API and rembg ────────────────────────────────
+var missingSpecies = speciesData.Where(s => !processedSpeciesIds.Contains(s.Id)).ToList();
+logger.LogInformation("Found {Count} species without local clipart. Attempting to fetch remote photos...", missingSpecies.Count);
+
+int fallbackProcessed = 0;
+int fallbackFailed = 0;
+
+var tempDir = Path.Combine(Path.GetTempPath(), "ColorExtractor");
+Directory.CreateDirectory(tempDir);
+
+foreach (var missing in missingSpecies)
+{
+    var photoUrl = missing.FlickrPhotoUrl ?? missing.INatPhotoUrl;
+    if (string.IsNullOrEmpty(photoUrl))
+    {
+        fallbackFailed++;
+        continue;
+    }
+
+    var tempFilePath = Path.Combine(tempDir, $"{missing.Id}.png");
+
+    logger.LogInformation("Fetching remote photo for missing SpeciesId={Id} ({SciName})", missing.Id, missing.SciName);
+
+    try
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "python",
+            Arguments = $"rembg_helper.py \"{photoUrl}\" \"{tempFilePath}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(psi);
+        process?.WaitForExit(60000); // 60 seconds timeout
+
+        if (process?.ExitCode == 0 && File.Exists(tempFilePath))
+        {
+            var colors = ExtractColors(tempFilePath, numColors);
+            for (int rank = 0; rank < colors.Count; rank++)
+            {
+                var (r, g, b, pct) = colors[rank];
+                var hex = $"#{r:X2}{g:X2}{b:X2}";
+                allValueRows.Add($"({id},{missing.Id},{rank + 1},'{hex}',{r},{g},{b},{pct:F2})");
+                id++;
+            }
+            fallbackProcessed++;
+            File.Delete(tempFilePath);
+        }
+        else
+        {
+            logger.LogWarning("Failed to process background removal for SpeciesId={Id}", missing.Id);
+            fallbackFailed++;
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError("Error in fallback process for SpeciesId={Id}: {Msg}", missing.Id, ex.Message);
+        fallbackFailed++;
+    }
+}
+
 // Write batched INSERT statements
 var header = "INSERT INTO [SpeciesColors] ([Id],[SpeciesId],[Rank],[HexColor],[R],[G],[B],[CoveragePercent]) VALUES";
 for (int i = 0; i < allValueRows.Count; i += SqlBatchSize)
@@ -132,7 +234,8 @@ for (int i = 0; i < allValueRows.Count; i += SqlBatchSize)
 
 sqlLines.Add("SET IDENTITY_INSERT [SpeciesColors] OFF;");
 sqlLines.Add("");
-sqlLines.Add($"-- Total: {matched} species seeded, {skipped} skipped (no DB match or parse error).");
+sqlLines.Add($"-- Total Local: {matched} species seeded, {skipped} skipped.");
+sqlLines.Add($"-- Total Remote (rembg): {fallbackProcessed} processed, {fallbackFailed} failed/skipped.");
 sqlLines.Add($"-- Total rows: {allValueRows.Count}");
 
 await File.WriteAllLinesAsync(outputFile, sqlLines);
