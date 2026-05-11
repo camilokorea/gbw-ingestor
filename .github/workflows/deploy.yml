@@ -55,7 +55,7 @@ jobs:
     - name: Upload eBird artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ebird-app
+        name: ebird-ingestor-app
         path: publish/ebird
 
     # ── Sound Ingestor ──────────────────────────────────────────
@@ -79,7 +79,7 @@ jobs:
     - name: Upload Sound artifact
       uses: actions/upload-artifact@v4
       with:
-        name: sound-app
+        name: sound-ingestor-app
         path: publish/sound
 
     # ── Flickr Synch ────────────────────────────────────────────
@@ -208,9 +208,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: inat-ingestor-app
-        path: |
-          publish/inat-ingestor
-          deploy/systemd/inat-ingestor.*
+        path: publish/inat-ingestor
     # ── iNat Photo ──────────────────────────────────────────────
     - name: Publish iNat Photo Worker
       run: dotnet publish src/INat.Photo.Worker/INat.Photo.Worker.csproj --configuration Release --no-build --output publish/inat-photo
@@ -247,7 +245,7 @@ jobs:
     - name: Download eBird artifact
       uses: actions/download-artifact@v4
       with:
-        name: ebird-app
+        name: ebird-ingestor-app
         path: ./app
 
     - name: Copy to Linode
@@ -257,7 +255,8 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/ebird-ingestor"
+        target: "/APPS/ebird-ingestor/app"
+        strip_components: 1
 
     - name: Set permissions
       uses: appleboy/ssh-action@v1.0.0
@@ -282,7 +281,7 @@ jobs:
     - name: Download Sound artifact
       uses: actions/download-artifact@v4
       with:
-        name: sound-app
+        name: sound-ingestor-app
         path: ./app
 
     - name: Copy to Linode
@@ -292,7 +291,8 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/sound-ingestor"
+        target: "/APPS/sound-ingestor/app"
+        strip_components: 1
 
     - name: Set permissions
       uses: appleboy/ssh-action@v1.0.0
@@ -327,7 +327,8 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/flickr-synch"
+        target: "/APPS/flickr-synch/app"
+        strip_components: 1
 
     - name: Set permissions
       uses: appleboy/ssh-action@v1.0.0
@@ -362,7 +363,8 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/flickr-eraser"
+        target: "/APPS/flickr-eraser/app"
+        strip_components: 1
 
     - name: Set permissions
       uses: appleboy/ssh-action@v1.0.0
@@ -397,7 +399,8 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/flickr-geo"
+        target: "/APPS/flickr-geo/app"
+        strip_components: 1
 
     - name: Set permissions
       uses: appleboy/ssh-action@v1.0.0
@@ -432,7 +435,8 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/flickr-matcher"
+        target: "/APPS/flickr-matcher/app"
+        strip_components: 1
 
     - name: Set permissions
       uses: appleboy/ssh-action@v1.0.0
@@ -467,7 +471,8 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         source: "app/."
-        target: "/APPS/inat-ingestor"
+        target: "/APPS/inat-ingestor/app"
+        strip_components: 1
 
     - name: Set permissions and reload systemd
       uses: appleboy/ssh-action@v1.0.0
@@ -476,22 +481,9 @@ jobs:
         username: ${{ secrets.LINODE_USERNAME }}
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
-          # 1. Update app permissions (re-map path to correct publish location)
           DEPLOY_PATH="/APPS/inat-ingestor/app"
-          APP_SRC="/APPS/inat-ingestor/publish/inat-ingestor"
-          
-          sudo mkdir -p $DEPLOY_PATH
-          sudo cp -r $APP_SRC/. $DEPLOY_PATH/
-          
           sudo chown -R root:root $DEPLOY_PATH
           sudo chmod -R 755 $DEPLOY_PATH
-
-          # 2. Deploy systemd files
-          SYSTEMD_SRC="/APPS/inat-ingestor/deploy/systemd"
-          sudo cp $SYSTEMD_SRC/inat-ingestor.service /etc/systemd/system/
-          sudo cp $SYSTEMD_SRC/inat-ingestor.timer /etc/systemd/system/
-
-          # 3. Reload and restart timer
           sudo systemctl daemon-reload
           sudo systemctl enable inat-ingestor.timer
           sudo systemctl restart inat-ingestor.timer

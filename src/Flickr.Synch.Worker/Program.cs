@@ -18,6 +18,8 @@ public class Program
 
         using var scope = host.Services.CreateScope();
         var services = scope.ServiceProvider;
+        var telemetry = services.GetRequiredService<eBird.Ingestor.Application.Contracts.IWorkerTelemetry>();
+        var runId = await telemetry.StartAsync("flickr-synch");
 
         try
         {
@@ -27,12 +29,13 @@ public class Program
 
             var synchService = services.GetRequiredService<IFlickrSynchService>();
             await synchService.SynchronizeAsync();
+            await telemetry.CompleteAsync(runId);
             Console.WriteLine("Flickr Synch Worker completed successfully.");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Fatal error in Flickr Synch Worker: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
+            await telemetry.FailAsync(runId, ex);
             Environment.Exit(1);
         }
     }
