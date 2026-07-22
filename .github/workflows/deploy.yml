@@ -62,17 +62,22 @@ jobs:
     - name: Publish Sound Ingestor
       run: dotnet publish src/Sound.Ingestor.Worker/Sound.Ingestor.Worker.csproj --configuration Release --no-build --output publish/sound
 
+    - name: Rename Sound appsettings template
+      run: mv publish/sound/appsettings.template.json publish/sound/appsettings.json
+
     - name: Inject secrets into Sound appsettings
       env:
         DB_SERVER: ${{ secrets.DB_SERVER }}
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        EBIRD_API_KEY: ${{ secrets.EBIRD_API_KEY }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
         sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/sound/appsettings.json
         sed -i "s#YOUR_USER#$DB_USER#g"              publish/sound/appsettings.json
         sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/sound/appsettings.json
+        sed -i "s#YOUR_EBIRD_API_KEY#$EBIRD_API_KEY#g"          publish/sound/appsettings.json
         sed -i "s#YOUR_TELEGRAM_BOT_TOKEN#$TELEGRAM_BOT_TOKEN#g" publish/sound/appsettings.json
         sed -i "s#YOUR_TELEGRAM_CHAT_ID#$TELEGRAM_CHAT_ID#g"     publish/sound/appsettings.json
 

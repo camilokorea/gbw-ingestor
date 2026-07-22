@@ -18,7 +18,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="appsettings.json">
+    <!-- Committed template only; real appsettings.json is gitignored and, on deploy,
+         produced by renaming this template and injecting secrets (see deploy.yml). -->
+    <Content Include="appsettings.template.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="appsettings.json" Condition="Exists('appsettings.json')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
