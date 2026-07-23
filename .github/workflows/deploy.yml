@@ -71,6 +71,7 @@ jobs:
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         EBIRD_API_KEY: ${{ secrets.EBIRD_API_KEY }}
+        XENOCANTO_API_KEY: ${{ secrets.XENOCANTO_API_KEY }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
@@ -78,6 +79,7 @@ jobs:
         sed -i "s#YOUR_USER#$DB_USER#g"              publish/sound/appsettings.json
         sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/sound/appsettings.json
         sed -i "s#YOUR_EBIRD_API_KEY#$EBIRD_API_KEY#g"          publish/sound/appsettings.json
+        sed -i "s#YOUR_XENOCANTO_API_KEY#$XENOCANTO_API_KEY#g"  publish/sound/appsettings.json
         sed -i "s#YOUR_TELEGRAM_BOT_TOKEN#$TELEGRAM_BOT_TOKEN#g" publish/sound/appsettings.json
         sed -i "s#YOUR_TELEGRAM_CHAT_ID#$TELEGRAM_CHAT_ID#g"     publish/sound/appsettings.json
 
