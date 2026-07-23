@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Configuration;
+using Polly;
+using Polly.Extensions.Http;
 using Sound.Ingestor.Application.Contracts.Api;
 using Sound.Ingestor.Application.Contracts.Dtos;
 using System.Net.Http.Json;
@@ -12,6 +14,11 @@ public class XenoCantoApiClient : IXenoCantoApiClient
 
     // Xeno-Canto retired API v2 (returns 404). v3 lives on the apex domain and requires an API key.
     private const string BaseUrl = "https://xeno-canto.org/api/3/recordings";
+
+    // The default 100s HttpClient timeout is too aggressive for Xeno-Canto, which can be slow
+    // under load; a single slow call was failing entire runs. Give each request more room and
+    // retry transient failures/timeouts.
+    private static readonly TimeSpan RequestTimeout = TimeSpan.FromMinutes(3);
 
     public XenoCantoApiClient(IHttpClientFactory httpClientFactory, IConfiguration configuration)
     {
@@ -28,23 +35,38 @@ public class XenoCantoApiClient : IXenoCantoApiClient
         }
 
         var client = _httpClientFactory.CreateClient();
+        client.Timeout = RequestTimeout;
+
         var query = BuildQuery(scientificName);
         var url = $"{BaseUrl}?query={Uri.EscapeDataString(query)}&key={Uri.EscapeDataString(apiKey)}";
 
         try
         {
-            var response = await client.GetAsync(url);
+            var policy = GetRetryPolicy();
+            var response = await policy.ExecuteAsync(() => client.GetAsync(url));
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content.ReadFromJsonAsync<XenoCantoResponseDto>();
             return result ?? new XenoCantoResponseDto();
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            // Log the exception (optional, requires ILogger)
+            // Transient failure that survived all retries (timeout / network / 5xx).
             Console.WriteLine($"Error fetching data from Xeno-Canto API: {ex.Message}");
             return new XenoCantoResponseDto(); // Return empty response on failure
         }
+    }
+
+    /// <summary>
+    /// Retries transient HTTP errors (5xx, 408, network failures) and request timeouts with
+    /// exponential backoff. 404/401 are not transient and are not retried.
+    /// </summary>
+    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+    {
+        return HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .Or<TaskCanceledException>() // HttpClient.Timeout surfaces as a cancelled task
+            .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
     }
 
     /// <summary>
