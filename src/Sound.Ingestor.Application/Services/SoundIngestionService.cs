@@ -47,7 +47,12 @@ public class SoundIngestionService : ISoundIngestionService
 
             foreach (var recordingDto in response.Recordings)
             {
-                var xenoCantoId = int.Parse(recordingDto.Id);
+                if (!int.TryParse(recordingDto.Id, out var xenoCantoId))
+                {
+                    _logger.LogWarning("Se omitió una grabación con Id no numérico de Xeno-Canto: '{Id}'.", recordingDto.Id);
+                    continue;
+                }
+
                 var signatureExists = await _dbContext.SoundSignatures.AnyAsync(s => s.XenoCantoId == xenoCantoId);
 
                 if (!signatureExists)
@@ -57,9 +62,9 @@ public class SoundIngestionService : ISoundIngestionService
                         XenoCantoId = xenoCantoId,
                         SpeciesId = species.Id,
                         SoundType = recordingDto.Type,
-                        AudioUrl = recordingDto.AudioUrl, // The API returns a protocol-relative URL
-                        RecordistUrl = recordingDto.RecordistUrl,
-                        License = "https:" + recordingDto.License, // The API returns a protocol-relative URL
+                        AudioUrl = NormalizeUrl(recordingDto.AudioUrl),
+                        RecordistUrl = NormalizeUrl(recordingDto.RecordistUrl),
+                        License = NormalizeUrl(recordingDto.License),
                         Quality = recordingDto.Quality
                     };
                     await _dbContext.SoundSignatures.AddAsync(newSignature);
@@ -69,5 +74,22 @@ public class SoundIngestionService : ISoundIngestionService
 
         var changes = await _dbContext.SaveChangesAsync();
         _logger.LogInformation("Proceso de ingestión de sonidos finalizado. Se guardaron {Count} nuevas grabaciones.", changes);
+    }
+
+    /// <summary>
+    /// Normalizes URLs returned by the Xeno-Canto API. Historically the API returned
+    /// protocol-relative URLs (<c>//xeno-canto.org/…</c>); v3 may return either those or
+    /// absolute URLs. This prepends <c>https:</c> only for protocol-relative values so we
+    /// never produce malformed strings like <c>https:https://…</c>.
+    /// </summary>
+    private static string NormalizeUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return string.Empty;
+        }
+
+        url = url.Trim();
+        return url.StartsWith("//", StringComparison.Ordinal) ? "https:" + url : url;
     }
 }
