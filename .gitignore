@@ -15,6 +15,13 @@
 .vs/
 
 # Secrets - IMPORTANT
-src/Worker/appsettings.json
+# These projects keep a placeholder appsettings.template.json in git; the real
+# appsettings.json holds live credentials (connection strings + API keys) and MUST
+# NOT be committed. On deploy the pipeline renames the template and injects secrets
+# (see .github/workflows/deploy.yml).
 commit_message.txt
+src/Worker/appsettings.json
+src/Sound.Ingestor.Worker/appsettings.json
+src/INat.Photo.Worker/appsettings.json
+tools/TaxonomyBackfill/appsettings.json
 tools/TranslationBackfill/appsettings.json
