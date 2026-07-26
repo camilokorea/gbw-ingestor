@@ -1,6 +1,7 @@
 using eBird.Ingestor.Application.Contracts;
 using eBird.Ingestor.Domain;
 using eBird.Ingestor.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -26,6 +27,24 @@ public class WorkerTelemetryService : IWorkerTelemetry
     {
         try
         {
+            // Reconcile orphaned runs: if a previous execution of this worker was killed
+            // externally (systemd timeout / OOM / redeploy), neither CompleteAsync nor
+            // FailAsync ran and its row is stuck in "running". Close those out now so the
+            // dashboard never shows a stale run as UNKNOWN.
+            var orphaned = await _db.WorkerRuns
+                .Where(r => r.WorkerName == workerName && r.Status == "running")
+                .ToListAsync();
+            foreach (var orphan in orphaned)
+            {
+                orphan.Status = "failed";
+                orphan.FinishedAt = DateTime.UtcNow;
+                orphan.ErrorMessage = "Interrupted: process ended before completion (reconciled on next run).";
+            }
+            if (orphaned.Count > 0)
+            {
+                _logger.LogWarning("Telemetry: reconciled {Count} orphaned '{Worker}' run(s) stuck in 'running'.", orphaned.Count, workerName);
+            }
+
             var run = new WorkerRun
             {
                 WorkerName = workerName,

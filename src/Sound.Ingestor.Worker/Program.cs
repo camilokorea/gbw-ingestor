@@ -23,8 +23,8 @@ public class Program
         try
         {
             var ingestionService = services.GetRequiredService<ISoundIngestionService>();
-            await ingestionService.ProcessSoundsAsync();
-            await telemetry.CompleteAsync(runId);
+            var recordsProcessed = await ingestionService.ProcessSoundsAsync();
+            await telemetry.CompleteAsync(runId, recordsProcessed);
         }
         catch (Exception ex)
         {

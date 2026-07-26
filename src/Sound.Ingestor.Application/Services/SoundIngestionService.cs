@@ -22,7 +22,7 @@ public class SoundIngestionService : ISoundIngestionService
         _logger = logger;
     }
 
-    public async Task ProcessSoundsAsync()
+    public async Task<int> ProcessSoundsAsync()
     {
         _logger.LogInformation("Iniciando el proceso de ingestión de sonidos de Xeno-Canto.");
 
@@ -30,7 +30,7 @@ public class SoundIngestionService : ISoundIngestionService
         if (!speciesList.Any())
         {
             _logger.LogWarning("No se encontraron especies en la base de datos. El proceso de ingestión de sonidos no puede continuar.");
-            return;
+            return 0;
         }
 
         foreach (var species in speciesList)
@@ -74,6 +74,7 @@ public class SoundIngestionService : ISoundIngestionService
 
         var changes = await _dbContext.SaveChangesAsync();
         _logger.LogInformation("Proceso de ingestión de sonidos finalizado. Se guardaron {Count} nuevas grabaciones.", changes);
+        return changes;
     }
 
     /// <summary>
