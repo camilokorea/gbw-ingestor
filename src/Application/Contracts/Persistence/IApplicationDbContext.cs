@@ -1,5 +1,6 @@
 using eBird.Ingestor.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace eBird.Ingestor.Application.Contracts.Persistence;
 
@@ -22,4 +23,11 @@ public interface IApplicationDbContext
     DbSet<SpeciesINatPhoto> SpeciesINatPhotos { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Exposes the EF Core change tracker so long-running batch workers can release tracked
+    /// entities between saves (<c>ChangeTracker.Clear()</c>) to keep memory flat.
+    /// Satisfied for free by <see cref="DbContext"/>.
+    /// </summary>
+    ChangeTracker ChangeTracker { get; }
 }
