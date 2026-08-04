@@ -7,6 +7,12 @@
 [Bb]in/
 [Oo]bj/
 
+# Published output & release artifacts (built from source by CI; see .github/workflows/deploy.yml)
+publish/
+scratch/
+*.tar.gz
+build_log.txt
+
 # Rider
 .idea/
 
