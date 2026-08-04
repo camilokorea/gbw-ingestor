@@ -103,6 +103,23 @@ Follow these steps to set up and run the project in your local environment.
     dotnet ef database update --project src/Infrastructure --startup-project src/iNat.Ingestor.Worker
     ```
 
+> ### 🗄 Single migration owner
+>
+> `gbw-ingestor` is the **single owner of the `eBirdIngestor` schema and of all EF Core
+> migrations** — the read-mostly [`gbw-api`](https://github.com/camilokorea/gbw-api) consumes the
+> same database but keeps **no migrations of its own** (Option A in
+> [gbw-api#5](https://github.com/camilokorea/gbw-api/issues/5)).
+>
+> This means `EbirdIngestorDbContext` also owns the API-facing tables `AppUsers`,
+> `SavedLocations` and `SavedTargets` (API-owned *data*, ingestor-owned *schema*). All schema
+> changes — including to those tables — are made here via `dotnet ef migrations add`.
+>
+> The one-time history reconciliation used when adopting this model (retiring the old `gbw-api`
+> migration rows and registering `AbsorbApiOwnedSchema` as already-applied against the existing
+> database) is in [`docs/db/2026-08-single-migration-owner-reconcile.sql`](docs/db/2026-08-single-migration-owner-reconcile.sql).
+> Run it once against the shared database **before** deploying the build that contains the
+> `AbsorbApiOwnedSchema` migration.
+
 2.  **Run the Ingestors:**
     -   The two ingestors can be run independently. Open a terminal at the project root for each one.
 

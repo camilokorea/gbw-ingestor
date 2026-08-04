@@ -66,6 +66,36 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.ToTable("SoundSignatures");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.AppUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FirebaseUid")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FirebaseUid")
+                        .IsUnique();
+
+                    b.ToTable("AppUsers");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.Country", b =>
                 {
                     b.Property<string>("Code")
@@ -385,6 +415,73 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.ToTable("Observations");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.SavedLocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AppUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("SavedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppUserId");
+
+                    b.ToTable("SavedLocations");
+                });
+
+            modelBuilder.Entity("eBird.Ingestor.Domain.SavedTarget", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AppUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FamilySciName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SearchTerm")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("SpeciesId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppUserId");
+
+                    b.HasIndex("SpeciesId");
+
+                    b.ToTable("SavedTargets");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.Species", b =>
                 {
                     b.Property<int>("Id")
@@ -664,6 +761,35 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.Navigation("Species");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.SavedLocation", b =>
+                {
+                    b.HasOne("eBird.Ingestor.Domain.AppUser", "AppUser")
+                        .WithMany("SavedLocations")
+                        .HasForeignKey("AppUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AppUser");
+                });
+
+            modelBuilder.Entity("eBird.Ingestor.Domain.SavedTarget", b =>
+                {
+                    b.HasOne("eBird.Ingestor.Domain.AppUser", "AppUser")
+                        .WithMany("SavedTargets")
+                        .HasForeignKey("AppUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("eBird.Ingestor.Domain.Species", "Species")
+                        .WithMany()
+                        .HasForeignKey("SpeciesId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AppUser");
+
+                    b.Navigation("Species");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.SpeciesColor", b =>
                 {
                     b.HasOne("eBird.Ingestor.Domain.Species", "Species")
@@ -733,6 +859,13 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Country");
+                });
+
+            modelBuilder.Entity("eBird.Ingestor.Domain.AppUser", b =>
+                {
+                    b.Navigation("SavedLocations");
+
+                    b.Navigation("SavedTargets");
                 });
 
             modelBuilder.Entity("eBird.Ingestor.Domain.Country", b =>

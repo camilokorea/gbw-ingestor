@@ -38,6 +38,11 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
     // Operations dashboard
     public DbSet<WorkerRun> WorkerRuns { get; set; }
 
+    // User accounts & saved data (API-owned data, ingestor-owned schema — see gbw-api#5)
+    public DbSet<AppUser> AppUsers { get; set; }
+    public DbSet<SavedLocation> SavedLocations { get; set; }
+    public DbSet<SavedTarget> SavedTargets { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -177,6 +182,34 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<WorkerRun>(entity =>
         {
             entity.HasIndex(r => new { r.WorkerName, r.StartedAt });
+        });
+
+        // ── AppUser & saved data (API-owned, ingestor-owned schema — gbw-api#5) ──
+
+        modelBuilder.Entity<AppUser>(entity =>
+        {
+            entity.HasIndex(u => u.FirebaseUid).IsUnique();
+        });
+
+        modelBuilder.Entity<SavedLocation>(entity =>
+        {
+            entity.HasOne(sl => sl.AppUser)
+                .WithMany(u => u.SavedLocations)
+                .HasForeignKey(sl => sl.AppUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SavedTarget>(entity =>
+        {
+            entity.HasOne(st => st.AppUser)
+                .WithMany(u => u.SavedTargets)
+                .HasForeignKey(st => st.AppUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(st => st.Species)
+                .WithMany()
+                .HasForeignKey(st => st.SpeciesId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
