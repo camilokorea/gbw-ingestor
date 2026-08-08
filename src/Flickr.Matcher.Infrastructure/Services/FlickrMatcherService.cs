@@ -23,21 +23,13 @@ public class FlickrMatcherService : IFlickrMatcherService
             .Select(s => new { s.Id, SciName = s.ScientificName.ToLower() })
             .ToListAsync(cancellationToken);
 
-        var duplicates = allSpecies
-            .GroupBy(s => s.SciName)
-            .Where(g => g.Count() > 1)
-            .Select(g => g.Key)
-            .ToList();
+        var lookup = SpeciesNameMatcher.BuildLookup(allSpecies.Select(s => (s.Id, s.SciName)));
 
-        if (duplicates.Any())
+        if (lookup.DuplicateScientificNames.Count > 0)
             _logger.LogWarning("Found {Count} duplicate scientific names (using first match): {Names}",
-                duplicates.Count, string.Join(", ", duplicates));
+                lookup.DuplicateScientificNames.Count, string.Join(", ", lookup.DuplicateScientificNames));
 
-        var speciesLookup = allSpecies
-            .GroupBy(s => s.SciName)
-            .ToDictionary(g => g.Key, g => g.First().Id);
-
-        _logger.LogInformation("Loaded {Count} distinct species for matching.", speciesLookup.Count);
+        _logger.LogInformation("Loaded {Count} distinct species for matching.", lookup.ByScientificName.Count);
 
         // Only load photos not yet linked to any species
         var unlinkedPhotos = await _db.FlickrPhotos
@@ -52,22 +44,16 @@ public class FlickrMatcherService : IFlickrMatcherService
 
         foreach (var photo in unlinkedPhotos)
         {
-            foreach (var (sciName, speciesId) in speciesLookup)
+            // Match if scientific name is in title OR in tags
+            foreach (var speciesId in SpeciesNameMatcher.MatchSpeciesIds(photo.Title, photo.Tags, lookup.ByScientificName))
             {
-                // Match if scientific name is in title OR in tags
-                if (photo.Title.Contains(sciName, StringComparison.OrdinalIgnoreCase) || 
-                    photo.Tags.Contains(sciName, StringComparison.OrdinalIgnoreCase))
+                if (matchedPairs.Add((speciesId, photo.Id)))
                 {
-                    var key = (speciesId, photo.Id);
-                    if (!matchedPairs.Contains(key))
+                    newMatches.Add(new SpeciesPhoto
                     {
-                        matchedPairs.Add(key);
-                        newMatches.Add(new SpeciesPhoto
-                        {
-                            SpeciesId = speciesId,
-                            FlickrPhotoId = photo.Id
-                        });
-                    }
+                        SpeciesId = speciesId,
+                        FlickrPhotoId = photo.Id
+                    });
                 }
             }
         }

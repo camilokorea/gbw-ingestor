@@ -29,6 +29,18 @@ jobs:
     - name: Build solution
       run: dotnet build --configuration Release --no-restore
 
+    # Nothing is published if the tests fail: every deploy job below depends on this one.
+    - name: Run tests
+      run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: '**/TestResults/*.trx'
+        if-no-files-found: ignore
+
     # ── eBird Ingestor ──────────────────────────────────────────
     - name: Publish eBird Ingestor
       run: dotnet publish src/Worker/eBird.Ingestor.Worker.csproj --configuration Release --no-build --output publish/ebird
