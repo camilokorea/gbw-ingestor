@@ -1,0 +1,36 @@
+{
+  "numRecordings": "2",
+  "numSpecies": "1",
+  "page": 1,
+  "numPages": 1,
+  "recordings": [
+    {
+      "id": "1001",
+      "gen": "Ramphastos",
+      "sp": "sulfuratus",
+      "ssp": "",
+      "en": "Keel-billed Toucan",
+      "cnt": "Costa Rica",
+      "loc": "La Selva, Heredia",
+      "type": "song",
+      "q": "A",
+      "file": "//xeno-canto.org/1001/download",
+      "url": "//xeno-canto.org/1001",
+      "lic": "//creativecommons.org/licenses/by-nc-sa/4.0/"
+    },
+    {
+      "id": "1002",
+      "gen": "Ramphastos",
+      "sp": "sulfuratus",
+      "ssp": "brevicarinatus",
+      "en": "Keel-billed Toucan",
+      "cnt": "Panama",
+      "loc": "Soberanía",
+      "type": "call",
+      "q": "B",
+      "file": "https://xeno-canto.org/1002/download",
+      "url": "https://xeno-canto.org/1002",
+      "lic": "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+    }
+  ]
+}

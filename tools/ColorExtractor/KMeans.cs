@@ -8,15 +8,23 @@ public static class KMeans
 {
     private static readonly Random Rng = new(42); // deterministic seed
 
+    /// <param name="seed">
+    /// Optional per-call seed. The shared generator is seeded once per process, so a single
+    /// <c>Cluster</c> call is only reproducible in isolation if it gets its own generator.
+    /// Leave null to keep the tool's existing whole-run determinism; tests pass a seed.
+    /// </param>
     public static List<(byte R, byte G, byte B, double Pct)> Cluster(
         List<(byte R, byte G, byte B)> pixels,
         int k,
-        int maxIterations = 25)
+        int maxIterations = 25,
+        int? seed = null)
     {
         if (pixels.Count == 0) return [];
 
+        var rng = seed is null ? Rng : new Random(seed.Value);
+
         // Initialize centroids with k-means++ style (spread out initial points)
-        var centroids = InitializePlusPlus(pixels, k);
+        var centroids = InitializePlusPlus(pixels, k, rng);
         var assignments = new int[pixels.Count];
 
         for (int iter = 0; iter < maxIterations; iter++)
@@ -69,10 +77,10 @@ public static class KMeans
     }
 
     private static (byte R, byte G, byte B)[] InitializePlusPlus(
-        List<(byte R, byte G, byte B)> pixels, int k)
+        List<(byte R, byte G, byte B)> pixels, int k, Random rng)
     {
         var centroids = new (byte R, byte G, byte B)[k];
-        centroids[0] = pixels[Rng.Next(pixels.Count)];
+        centroids[0] = pixels[rng.Next(pixels.Count)];
 
         for (int c = 1; c < k; c++)
         {
@@ -81,7 +89,7 @@ public static class KMeans
                 .Select(p => (double)MinDistSq(p, centroids, c))
                 .ToArray();
             double total = distances.Sum();
-            double threshold = Rng.NextDouble() * total;
+            double threshold = rng.NextDouble() * total;
             double cumulative = 0;
             int chosen = 0;
             for (int i = 0; i < distances.Length; i++)

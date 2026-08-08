@@ -1,0 +1,14 @@
+{
+  "total_results": 1,
+  "page": 1,
+  "per_page": 30,
+  "results": [
+    {
+      "id": 18762,
+      "rank": "species",
+      "name": "Ramphastos sulfuratus",
+      "preferred_common_name": "Tucán Pico Iris",
+      "iconic_taxon_name": "Aves"
+    }
+  ]
+}

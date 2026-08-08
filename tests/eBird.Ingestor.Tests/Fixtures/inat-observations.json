@@ -1,0 +1,78 @@
+{
+  "total_results": 4,
+  "page": 1,
+  "per_page": 200,
+  "results": [
+    {
+      "id": 255000001,
+      "observed_on": "2026-04-21",
+      "quality_grade": "research",
+      "num_identification_agreements": 4,
+      "place_guess": "La Selva, Sarapiquí, Heredia, Costa Rica",
+      "geojson": { "type": "Point", "coordinates": [-84.0064, 10.4306] },
+      "taxon": {
+        "id": 18762,
+        "name": "Ramphastos sulfuratus",
+        "rank": "species",
+        "preferred_common_name": "Keel-billed Toucan",
+        "iconic_taxon_name": "Aves"
+      },
+      "identifications": [
+        {
+          "taxon": {
+            "ancestors": [
+              { "id": 3, "rank": "class", "name": "Aves" },
+              { "id": 71261, "rank": "order", "name": "Piciformes" },
+              { "id": 5306, "rank": "family", "name": "Ramphastidae" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 255000002,
+      "observed_on": "2026-04-20",
+      "quality_grade": "research",
+      "num_identification_agreements": 2,
+      "place_guess": "Monteverde, Puntarenas, Costa Rica",
+      "geojson": { "type": "Point", "coordinates": [-84.7936, 10.3006] },
+      "taxon": {
+        "id": 18937,
+        "name": "Pharomachrus mocinno",
+        "rank": "species",
+        "preferred_common_name": "Resplendent Quetzal",
+        "iconic_taxon_name": "Aves"
+      }
+    },
+    {
+      "id": 255000003,
+      "observed_on": "2026-04-19",
+      "quality_grade": "research",
+      "num_identification_agreements": 1,
+      "place_guess": "Corcovado, Costa Rica",
+      "geojson": { "type": "Point", "coordinates": [-83.5, 8.5] },
+      "taxon": {
+        "id": 43094,
+        "name": "Bradypus variegatus",
+        "rank": "species",
+        "preferred_common_name": "Brown-throated Sloth",
+        "iconic_taxon_name": "Mammalia"
+      }
+    },
+    {
+      "id": 255000004,
+      "observed_on": null,
+      "quality_grade": "research",
+      "num_identification_agreements": 1,
+      "place_guess": null,
+      "geojson": null,
+      "taxon": {
+        "id": 8229,
+        "name": "Ara macao",
+        "rank": "species",
+        "preferred_common_name": "Scarlet Macaw",
+        "iconic_taxon_name": "Aves"
+      }
+    }
+  ]
+}

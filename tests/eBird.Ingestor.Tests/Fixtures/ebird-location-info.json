@@ -1,0 +1,12 @@
+{
+  "locId": "L1234567",
+  "name": "La Selva Biological Station",
+  "latitude": 10.4306,
+  "longitude": -84.0064,
+  "countryCode": "CR",
+  "countryName": "Costa Rica",
+  "subnational1Name": "Heredia",
+  "subnational1Code": "CR-H",
+  "isHotspot": true,
+  "hierarchicalName": "La Selva Biological Station, Heredia, CR"
+}
