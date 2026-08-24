@@ -62,6 +62,11 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
         {
             entity.Property(l => l.Id).ValueGeneratedNever();
 
+            // The radar and tour planner both filter on a lat/lng bounding box with no date
+            // floor, so the coordinate pair — not ObservationDate — is what narrows those
+            // queries. Without this index they degrade to a full scan as the table grows.
+            entity.HasIndex(l => new { l.Latitude, l.Longitude });
+
             entity.HasOne(l => l.Country)
                 .WithMany(c => c.Locations)
                 .HasForeignKey(l => l.CountryCode);

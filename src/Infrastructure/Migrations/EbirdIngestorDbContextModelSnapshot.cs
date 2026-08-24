@@ -346,6 +346,8 @@ namespace eBird.Ingestor.Infrastructure.Migrations
 
                     b.HasIndex("StateId");
 
+                    b.HasIndex("Latitude", "Longitude");
+
                     b.ToTable("Locations");
                 });
 
