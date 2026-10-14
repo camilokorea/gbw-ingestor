@@ -11,7 +11,6 @@ namespace Flickr.Synch.Infrastructure.Services;
 public class FlickrSynchService : IFlickrSynchService
 {
     private static readonly TimeSpan PageDelay = TimeSpan.FromMilliseconds(1500);
-    private const int MaxRetries = 10;
 
     private readonly EbirdIngestorDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -93,14 +92,14 @@ public class FlickrSynchService : IFlickrSynchService
                       $"&api_key={apiKey}" +
                       $"&group_id={groupId}" +
                       $"&min_upload_date={minUploadDate}" +
-                      $"&extras=url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o,owner_name,path_alias,tags" +
+                      $"&extras=url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o,owner_name,path_alias,tags,license" +
                       $"&per_page={pageSize}" +
                       $"&page={page}" +
                       $"&format=json&nojsoncallback=1";
 
             _logger.LogInformation("Fetching group={GroupId} page={Page}", groupId, page);
 
-            var response = await FetchWithRetryAsync(client, url, cancellationToken);
+            var response = await FlickrHttp.GetWithRetryAsync(client, url, _logger, cancellationToken);
             if (response is null)
             {
                 _logger.LogError("Giving up on group={GroupId} page={Page} after max retries.", groupId, page);
@@ -144,6 +143,7 @@ public class FlickrSynchService : IFlickrSynchService
                     OwnerName = GetString(photo, "ownername"),
                     UserId = GetString(photo, "owner"),
                     Tags = GetString(photo, "tags"),
+                    LicenseId = GetLicenseId(photo),
                     SquareThumbnailUrl = GetString(photo, "url_sq"),
                     LargeSquareThumbnailUrl = GetString(photo, "url_q"),
                     ThumbnailUrl = GetString(photo, "url_t"),
@@ -177,42 +177,11 @@ public class FlickrSynchService : IFlickrSynchService
         return inserted;
     }
 
-    /// <summary>
-    /// Sends GET request with automatic retry on HTTP 429, using Retry-After header or
-    /// exponential backoff (2^attempt seconds). Returns null if all retries exhausted.
-    /// </summary>
-    private async Task<HttpResponseMessage?> FetchWithRetryAsync(
-        HttpClient client,
-        string url,
-        CancellationToken cancellationToken)
+    /// <summary>Flickr sends "license" as a numeric string ("4"); accept a bare number too.</summary>
+    public static int? GetLicenseId(JsonElement photo)
     {
-        for (int attempt = 0; attempt < MaxRetries; attempt++)
-        {
-            var response = await client.GetAsync(url, cancellationToken);
-
-            if (response.IsSuccessStatusCode)
-                return response;
-
-            if ((int)response.StatusCode == 429)
-            {
-                // Respect Retry-After header if present, else exponential backoff
-                var retryAfter = response.Headers.RetryAfter?.Delta
-                    ?? TimeSpan.FromSeconds(Math.Pow(2, attempt + 1));
-
-                _logger.LogWarning(
-                    "HTTP 429 received. Waiting {Seconds}s before retry {Attempt}/{Max}.",
-                    retryAfter.TotalSeconds, attempt + 1, MaxRetries);
-
-                await Task.Delay(retryAfter, cancellationToken);
-                continue;
-            }
-
-            // Non-retryable error
-            _logger.LogError("Unrecoverable HTTP {Status} for URL: {Url}", (int)response.StatusCode, url);
-            return null;
-        }
-
-        return null;
+        if (!photo.TryGetProperty("license", out var value)) return null;
+        return FlickrLicenses.Parse(value.ValueKind == JsonValueKind.Number ? value.GetRawText() : value.ToString());
     }
 
     private static string GetString(JsonElement element, string property)

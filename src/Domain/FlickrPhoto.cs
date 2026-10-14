@@ -53,6 +53,12 @@ public class FlickrPhoto
     /// <summary>Space-delimited tags from Flickr.</summary>
     public string? Tags { get; set; }
 
+    /// <summary>
+    /// Flickr license id (see <see cref="FlickrLicenses"/>). Null = not fetched yet: photos synced before
+    /// licenses were recorded, until the FlickrLicenseBackfill tool fills them in.
+    /// </summary>
+    public int? LicenseId { get; set; }
+
     /// <summary>Optional geolocation data fetched by the Geo worker.</summary>
     public FlickrPhotoLocation? Location { get; set; }
 
