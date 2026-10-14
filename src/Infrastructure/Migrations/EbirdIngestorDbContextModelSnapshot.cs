@@ -96,6 +96,9 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("LicenseId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Medium640Url")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

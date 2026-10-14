@@ -10,6 +10,7 @@ public static class DependencyInjection
     {
         services.AddHttpClient("Flickr");
         services.AddScoped<IFlickrSynchService, FlickrSynchService>();
+        services.AddScoped<IFlickrLicenseBackfill, FlickrLicenseBackfill>();
         return services;
     }
 }
