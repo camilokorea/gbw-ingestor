@@ -107,6 +107,7 @@ public class CommonsPhotoIngestionService : ICommonsPhotoIngestionService
                     .Take(MaxCandidatesPerSpecies)
                     .Select((title, rank) => ToPhoto(taxon, title, rank, infos, totals.Skipped))
                     .OfType<CommonsPhoto>()
+                    .DistinctBy(p => TitleKey(p.FileTitle))
                     .Take(MaxPhotosPerSpecies)
                     .ToList();
 
@@ -196,13 +197,18 @@ public class CommonsPhotoIngestionService : ICommonsPhotoIngestionService
         var existing = await _db.CommonsPhotos
             .Where(p => speciesIds.Contains(p.SpeciesId))
             .ToListAsync(cancellationToken);
-        var byKey = existing.ToDictionary(p => (p.SpeciesId, p.FileTitle));
-        var wanted = desired.Select(p => (p.SpeciesId, p.FileTitle)).ToHashSet();
+        // Keyed like SQL Server compares (case-insensitive collation): two titles differing only in case would
+        // otherwise collide on the unique index.
+        var byKey = existing
+            .GroupBy(p => (p.SpeciesId, TitleKey(p.FileTitle)))
+            .ToDictionary(g => g.Key, g => g.First());
+        var wanted = desired.Select(p => (p.SpeciesId, TitleKey(p.FileTitle))).ToHashSet();
 
         foreach (var photo in desired)
         {
-            if (byKey.TryGetValue((photo.SpeciesId, photo.FileTitle), out var current))
+            if (byKey.TryGetValue((photo.SpeciesId, TitleKey(photo.FileTitle)), out var current))
             {
+                current.FileTitle = photo.FileTitle;
                 Overwrite(current, photo);
                 totals.Updated++;
             }
@@ -213,7 +219,7 @@ public class CommonsPhotoIngestionService : ICommonsPhotoIngestionService
             }
         }
 
-        foreach (var stale in existing.Where(p => !wanted.Contains((p.SpeciesId, p.FileTitle))))
+        foreach (var stale in existing.Where(p => !wanted.Contains((p.SpeciesId, TitleKey(p.FileTitle)))))
         {
             _db.CommonsPhotos.Remove(stale);
             totals.Deleted++;
@@ -228,6 +234,8 @@ public class CommonsPhotoIngestionService : ICommonsPhotoIngestionService
         var t = title.Replace('_', ' ').Trim();
         return t.StartsWith("File:", StringComparison.OrdinalIgnoreCase) ? "File:" + t[5..] : "File:" + t;
     }
+
+    private static string TitleKey(string title) => title.ToUpperInvariant();
 
     /// <summary>Commons' Artist field is HTML (links, spans, bdi); a credit line needs the text.</summary>
     public static string PlainText(string html)
