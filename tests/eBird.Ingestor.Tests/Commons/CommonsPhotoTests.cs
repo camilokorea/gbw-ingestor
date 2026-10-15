@@ -139,6 +139,25 @@ public class CommonsPhotoTests
     }
 
     [Fact]
+    public async Task TitlesDifferingOnlyInCaseAreStoredOnce()
+    {
+        // Seen in production: an item listing "Golden-Olive Woodpecker.jpg" and "Golden-olive Woodpecker.jpg". Distinct
+        // to C#, equal to SQL Server's case-insensitive unique index.
+        using var db = TestDatabase.Create();
+        await SeedSpeciesAsync(db, "Colaptes rubiginosus");
+        var client = new FakeCommons()
+            .Taxon("Colaptes rubiginosus", "Q1", "File:Golden-Olive Woodpecker.jpg", "File:Golden-olive Woodpecker.jpg")
+            .Image("File:Golden-Olive Woodpecker.jpg", "cc-by-4.0", "Ana")
+            .Image("File:Golden-olive Woodpecker.jpg", "cc-by-4.0", "Ana");
+
+        await Service(db, client).SyncAsync();
+        await Service(db, client).SyncAsync();
+
+        using var assertions = db.NewContext();
+        Assert.Single(await assertions.CommonsPhotos.ToListAsync());
+    }
+
+    [Fact]
     public async Task ASecondRunUpdatesChangedPhotosAndRemovesOnesNoLongerOnWikidata()
     {
         using var db = TestDatabase.Create();
