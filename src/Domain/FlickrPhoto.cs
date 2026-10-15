@@ -59,6 +59,12 @@ public class FlickrPhoto
     /// </summary>
     public int? LicenseId { get; set; }
 
+    /// <summary>
+    /// When the Geo worker asked Flickr for this photo's location. Set whether or not there was one: most photos have
+    /// none, and asking again every run is what used to exhaust the API key. Null = not asked yet.
+    /// </summary>
+    public DateTime? GeoCheckedAt { get; set; }
+
     /// <summary>Optional geolocation data fetched by the Geo worker.</summary>
     public FlickrPhotoLocation? Location { get; set; }
 

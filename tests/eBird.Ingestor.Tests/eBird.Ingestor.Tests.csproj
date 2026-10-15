@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\Infrastructure\eBird.Ingestor.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Flickr.Matcher.Infrastructure\Flickr.Matcher.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Flickr.Synch.Infrastructure\Flickr.Synch.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Flickr.Geo.Infrastructure\Flickr.Geo.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Sound.Ingestor.Infrastructure\Sound.Ingestor.Infrastructure.csproj" />
     <ProjectReference Include="..\..\tools\ColorExtractor\ColorExtractor.csproj" />
   </ItemGroup>
