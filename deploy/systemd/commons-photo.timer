@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer for GBW Commons Photo Worker
+After=network.target
+
+[Timer]
+OnBootSec=20min
+OnUnitActiveSec=7d
+RandomizedDelaySec=30min
+
+[Install]
+WantedBy=timers.target

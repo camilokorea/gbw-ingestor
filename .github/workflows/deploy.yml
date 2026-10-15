@@ -253,6 +253,31 @@ jobs:
         name: inat-photo-app
         path: publish/inat-photo
 
+    # ── Commons Photo ──────────────────────────────────────────────
+    - name: Publish Commons Photo Worker
+      run: dotnet publish src/Commons.Photo.Worker/Commons.Photo.Worker.csproj --configuration Release --no-build --output publish/commons-photo
+
+    - name: Rename Commons Photo appsettings template
+      run: mv publish/commons-photo/appsettings.template.json publish/commons-photo/appsettings.json
+
+    - name: Inject secrets into Commons Photo appsettings
+      env:
+        DB_SERVER: ${{ secrets.DB_SERVER }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: |
+        sed -i "s#YOUR_DATABASE_SERVER#$DB_SERVER#g" publish/commons-photo/appsettings.json
+        sed -i "s#YOUR_USER#$DB_USER#g"              publish/commons-photo/appsettings.json
+        sed -i "s#YOUR_PASSWORD#$DB_PASSWORD#g"      publish/commons-photo/appsettings.json
+
+    - name: Upload Commons Photo artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: commons-photo-app
+        path: publish/commons-photo
+
   # ─────────────────────────────────────────────────────────────
   # DEPLOY — eBird Ingestor
   # ─────────────────────────────────────────────────────────────
@@ -578,3 +603,75 @@ jobs:
           sudo systemctl daemon-reload
           sudo systemctl enable inat-photo.timer
           sudo systemctl restart inat-photo.timer
+
+  # ─────────────────────────────────────────────────────────────
+  # DEPLOY — Commons Photo Worker
+  # ─────────────────────────────────────────────────────────────
+  deploy-commons-photo:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Commons Photo artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: commons-photo-app
+        path: ./app
+
+    - name: Copy app to Linode
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        source: "app/."
+        target: "/APPS/commons-photo/app"
+        strip_components: 1
+
+    - name: Install systemd units and restart timer
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        key: ${{ secrets.LINODE_SSH_KEY }}
+        script: |
+          # 1. Permissions
+          sudo chown -R root:root /APPS/commons-photo/app
+          sudo chmod -R 755 /APPS/commons-photo/app
+
+          # 2. Write systemd service file
+          sudo tee /etc/systemd/system/commons-photo.service > /dev/null << 'EOF'
+          [Unit]
+          Description=GBW Commons Photo Worker -- open-licensed species photos from Wikimedia Commons (via Wikidata).
+          After=network.target
+
+          [Service]
+          Type=oneshot
+          WorkingDirectory=/APPS/commons-photo/app
+          ExecStart=/usr/bin/dotnet /APPS/commons-photo/app/Commons.Photo.Worker.dll
+          User=root
+          Group=root
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          # 3. Write systemd timer file
+          sudo tee /etc/systemd/system/commons-photo.timer > /dev/null << 'EOF'
+          [Unit]
+          Description=Timer for GBW Commons Photo Worker
+          After=network.target
+
+          [Timer]
+          OnBootSec=20min
+          OnUnitActiveSec=7d
+          RandomizedDelaySec=30min
+
+          [Install]
+          WantedBy=timers.target
+          EOF
+
+          # 4. Reload and enable
+          sudo systemctl daemon-reload
+          sudo systemctl enable commons-photo.timer
+          sudo systemctl restart commons-photo.timer

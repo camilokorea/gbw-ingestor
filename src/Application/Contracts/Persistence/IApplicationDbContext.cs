@@ -21,6 +21,7 @@ public interface IApplicationDbContext
     DbSet<SyncState> SyncStates { get; }
     DbSet<INatPhoto> INatPhotos { get; }
     DbSet<SpeciesINatPhoto> SpeciesINatPhotos { get; }
+    DbSet<CommonsPhoto> CommonsPhotos { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
