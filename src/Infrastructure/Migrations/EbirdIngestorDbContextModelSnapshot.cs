@@ -158,6 +158,9 @@ namespace eBird.Ingestor.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("GeoCheckedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("LargeSquareThumbnailUrl")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

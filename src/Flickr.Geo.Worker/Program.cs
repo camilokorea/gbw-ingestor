@@ -23,8 +23,8 @@ public class Program
         try
         {
             var geoService = services.GetRequiredService<IFlickrGeoService>();
-            await geoService.GeolocatePhotosAsync();
-            await telemetry.CompleteAsync(runId);
+            var report = await geoService.GeolocatePhotosAsync();
+            await telemetry.CompleteAsync(runId, report.Located + report.WithoutLocation);
             Console.WriteLine("Flickr Geo Worker completed successfully.");
         }
         catch (Exception ex)
