@@ -35,6 +35,9 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
     public DbSet<INatPhoto> INatPhotos { get; set; }
     public DbSet<SpeciesINatPhoto> SpeciesINatPhotos { get; set; }
 
+    // Wikimedia Commons photos (open-licensed, for social posts)
+    public DbSet<CommonsPhoto> CommonsPhotos { get; set; }
+
     // Operations dashboard
     public DbSet<WorkerRun> WorkerRuns { get; set; }
 
@@ -162,6 +165,23 @@ public class EbirdIngestorDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<INatPhoto>(entity =>
         {
             entity.HasIndex(p => p.PhotoId).IsUnique();
+        });
+
+        modelBuilder.Entity<CommonsPhoto>(entity =>
+        {
+            entity.HasIndex(p => new { p.SpeciesId, p.FileTitle }).IsUnique();
+            entity.Property(p => p.WikidataId).HasMaxLength(20);
+            entity.Property(p => p.FileTitle).HasMaxLength(400);
+            entity.Property(p => p.ImageUrl).HasMaxLength(1000);
+            entity.Property(p => p.DescriptionUrl).HasMaxLength(1000);
+            entity.Property(p => p.Artist).HasMaxLength(CommonsPhoto.MaxArtistLength);
+            entity.Property(p => p.LicenseCode).HasMaxLength(50);
+            entity.Property(p => p.LicenseShortName).HasMaxLength(100);
+            entity.Property(p => p.LicenseUrl).HasMaxLength(300);
+            entity.HasOne(p => p.Species)
+                .WithMany()
+                .HasForeignKey(p => p.SpeciesId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<SpeciesINatPhoto>(entity =>

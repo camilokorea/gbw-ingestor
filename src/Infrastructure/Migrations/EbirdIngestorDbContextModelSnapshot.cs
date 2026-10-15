@@ -66,6 +66,76 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                     b.ToTable("SoundSignatures");
                 });
 
+            modelBuilder.Entity("eBird.Ingestor.Domain.CommonsPhoto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Artist")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("DescriptionUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("FetchedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FileTitle")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("LicenseCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("LicenseShortName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("LicenseUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SpeciesId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("int");
+
+                    b.Property<string>("WikidataId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpeciesId", "FileTitle")
+                        .IsUnique();
+
+                    b.ToTable("CommonsPhotos");
+                });
+
             modelBuilder.Entity("eBird.Ingestor.Domain.Country", b =>
                 {
                     b.Property<string>("Code")
@@ -612,6 +682,17 @@ namespace eBird.Ingestor.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("Sound.Ingestor.Domain.SoundSignature", b =>
+                {
+                    b.HasOne("eBird.Ingestor.Domain.Species", "Species")
+                        .WithMany()
+                        .HasForeignKey("SpeciesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Species");
+                });
+
+            modelBuilder.Entity("eBird.Ingestor.Domain.CommonsPhoto", b =>
                 {
                     b.HasOne("eBird.Ingestor.Domain.Species", "Species")
                         .WithMany()

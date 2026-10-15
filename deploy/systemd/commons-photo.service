@@ -1,0 +1,13 @@
+[Unit]
+Description=GBW Commons Photo Worker — open-licensed species photos from Wikimedia Commons (via Wikidata).
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/APPS/commons-photo/app
+ExecStart=/usr/bin/dotnet /APPS/commons-photo/app/Commons.Photo.Worker.dll
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

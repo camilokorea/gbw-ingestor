@@ -1,0 +1,235 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "ns": 6,
+    "title": "File:Does not exist 12345.jpg",
+    "missing": true,
+    "imagerepository": ""
+   },
+   {
+    "pageid": 125462845,
+    "ns": 6,
+    "title": "File:House sparrow male in Prospect Park (53532).jpg",
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 7762412,
+      "width": 4400,
+      "height": 3422,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/House_sparrow_male_in_Prospect_Park_%2853532%29.jpg/1280px-House_sparrow_male_in_Prospect_Park_%2853532%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1080,
+      "thumbheight": 840,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/House_sparrow_male_in_Prospect_Park_%2853532%29.jpg/3840px-House_sparrow_male_in_Prospect_Park_%2853532%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/House_sparrow_male_in_Prospect_Park_%2853532%29.jpg/1280px-House_sparrow_male_in_Prospect_Park_%2853532%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1080,
+       "height": 840,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/House_sparrow_male_in_Prospect_Park_%2853532%29.jpg/3840px-House_sparrow_male_in_Prospect_Park_%2853532%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/9b/House_sparrow_male_in_Prospect_Park_%2853532%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:House_sparrow_male_in_Prospect_Park_(53532).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=125462845",
+      "extmetadata": {
+       "Credit": {
+        "value": "<span class=\"int-own-work\" lang=\"en\">Own work</span>",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Rhododendrites\" title=\"User:Rhododendrites\">Rhododendrites</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "UsageTerms": {
+        "value": "Creative Commons Attribution-Share Alike 4.0",
+        "source": "commons-desc-page"
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/4.0",
+        "source": "commons-desc-page"
+       },
+       "Copyrighted": {
+        "value": "True",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 130703066,
+    "ns": 6,
+    "title": "File:Clay-coloured thrush (Turdus grayi megas) Palopo.jpg",
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 3935592,
+      "width": 3200,
+      "height": 2133,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/Clay-coloured_thrush_%28Turdus_grayi_megas%29_Palopo.jpg/1280px-Clay-coloured_thrush_%28Turdus_grayi_megas%29_Palopo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1080,
+      "thumbheight": 720,
+      "responsiveUrls": {
+       "2": "https://upload.wikimedia.org/wikipedia/commons/d/df/Clay-coloured_thrush_%28Turdus_grayi_megas%29_Palopo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/Clay-coloured_thrush_%28Turdus_grayi_megas%29_Palopo.jpg/1280px-Clay-coloured_thrush_%28Turdus_grayi_megas%29_Palopo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1080,
+       "height": 720,
+       "srcset": "https://upload.wikimedia.org/wikipedia/commons/d/df/Clay-coloured_thrush_%28Turdus_grayi_megas%29_Palopo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/df/Clay-coloured_thrush_%28Turdus_grayi_megas%29_Palopo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Clay-coloured_thrush_(Turdus_grayi_megas)_Palopo.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=130703066",
+      "extmetadata": {
+       "Credit": {
+        "value": "<span class=\"int-own-work\" lang=\"en\">Own work</span>, from <a rel=\"nofollow\" class=\"external text\" href=\"https://www.sharpphotography.co.uk/\">Sharp Photography, sharpphotography.co.uk</a>",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<bdi><a href=\"https://www.wikidata.org/wiki/Q54800218\" class=\"extiw\" title=\"d:Q54800218\"><span title=\"Scottish wildlife photographer\">Charles J. Sharp</span></a></bdi>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "UsageTerms": {
+        "value": "Creative Commons Attribution-Share Alike 4.0",
+        "source": "commons-desc-page"
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/4.0",
+        "source": "commons-desc-page"
+       },
+       "Copyrighted": {
+        "value": "True",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 151679083,
+    "ns": 6,
+    "title": "File:Keel billed toucan costa rica (cropped).jpg",
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 3171385,
+      "width": 3275,
+      "height": 2726,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/96/Keel_billed_toucan_costa_rica_%28cropped%29.jpg/1280px-Keel_billed_toucan_costa_rica_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 1080,
+      "thumbheight": 899,
+      "responsiveUrls": {
+       "2": "https://upload.wikimedia.org/wikipedia/commons/9/96/Keel_billed_toucan_costa_rica_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/96/Keel_billed_toucan_costa_rica_%28cropped%29.jpg/1280px-Keel_billed_toucan_costa_rica_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 1080,
+       "height": 899,
+       "srcset": "https://upload.wikimedia.org/wikipedia/commons/9/96/Keel_billed_toucan_costa_rica_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/96/Keel_billed_toucan_costa_rica_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Keel_billed_toucan_costa_rica_(cropped).jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=151679083",
+      "extmetadata": {
+       "Credit": {
+        "value": "This image has been <b>extracted</b> from another file",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Ttschleuder&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:Ttschleuder (page does not exist)\">Ttschleuder</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 3.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "UsageTerms": {
+        "value": "Creative Commons Attribution-Share Alike 3.0",
+        "source": "commons-desc-page"
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "https://creativecommons.org/licenses/by-sa/3.0",
+        "source": "commons-desc-page"
+       },
+       "Copyrighted": {
+        "value": "True",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-3.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   }
+  ]
+ }
+}
