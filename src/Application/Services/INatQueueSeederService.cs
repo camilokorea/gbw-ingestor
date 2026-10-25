@@ -31,6 +31,13 @@ public class INatQueueSeederService : IINatQueueSeederService
         _logger.LogInformation("Seeding the iNaturalist ingestion queue...");
 
         // Only clear iNat items — eBird items are managed by QueueSeederService
+        var exhausted = await _dbContext.IngestionQueue
+            .Where(i => i.Source == "inat" && i.Status == IngestionStatus.Failed)
+            .Select(i => i.RegionCode)
+            .ToListAsync();
+        if (exhausted.Count > 0)
+            _logger.LogWarning("{Count} regions failed every attempt last cycle: {Regions}", exhausted.Count, string.Join(" ", exhausted));
+
         await _dbContext.IngestionQueue
             .Where(i => i.Source == "inat")
             .ExecuteDeleteAsync();
@@ -61,11 +68,13 @@ public class INatQueueSeederService : IINatQueueSeederService
     {
         _logger.LogInformation("Checking iNat queue is already processed...");
 
-        var queueItems = await _dbContext.IngestionQueue
-            .Where(i => i.Source == "inat" &&
-                       (i.Status == IngestionStatus.Queued || i.Status == IngestionStatus.Failed))
-            .ToListAsync();
+        // Work left = regions still queued, or failed with attempts to spare. Regions that used up their attempts are
+        // done for this cycle; counting them as pending kept the queue from ever being seeded again.
+        var pending = await _dbContext.IngestionQueue
+            .AnyAsync(i => i.Source == "inat" &&
+                           (i.Status == IngestionStatus.Queued ||
+                            (i.Status == IngestionStatus.Failed && i.AttemptCount < IngestionQueue.MaxAttempts)));
 
-        return queueItems.Any();
+        return pending;
     }
 }
