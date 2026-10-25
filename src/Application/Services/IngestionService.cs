@@ -20,7 +20,7 @@ public class IngestionService : IIngestionService
         _logger = logger;
     }
 
-    public async Task ProcessQueueAsync()
+    public async Task<int> ProcessQueueAsync()
     {
         const int batchSize = 10; // Process 10 regions at a time
         _logger.LogInformation("Inicio del proceso de ingestión desde la cola. Lote de {BatchSize} regiones.", batchSize);
@@ -29,7 +29,7 @@ public class IngestionService : IIngestionService
         var queueItems = await _dbContext.IngestionQueue
             .Where(i => i.Source == "ebird" &&
                        (i.Status == IngestionStatus.Queued || i.Status == IngestionStatus.Failed) &&
-                       i.AttemptCount < 10)
+                       i.AttemptCount < IngestionQueue.MaxAttempts)
             .OrderBy(i => i.LastAttemptUtc)
             .Take(batchSize)
             .ToListAsync();
@@ -37,8 +37,10 @@ public class IngestionService : IIngestionService
         if (!queueItems.Any())
         {
             _logger.LogInformation("No hay regiones en la cola para procesar.");
-            return;
+            return 0;
         }
+
+        var saved = 0;
 
         // Lock the items
         foreach (var item in queueItems)
@@ -85,6 +87,7 @@ public class IngestionService : IIngestionService
                             Species = species
                         };
                         _dbContext.Observations.Add(observation);
+                        saved++;
                     }
                 }
 
@@ -102,7 +105,8 @@ public class IngestionService : IIngestionService
             }
         }
 
-        _logger.LogInformation("Proceso de ingestión finalizado.");
+        _logger.LogInformation("Proceso de ingestión finalizado: {Saved} observaciones nuevas.", saved);
+        return saved;
     }
 
     private async Task<Country> GetOrCreateCountryAsync(string countryCode)

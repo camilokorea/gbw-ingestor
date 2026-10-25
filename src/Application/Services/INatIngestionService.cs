@@ -31,7 +31,7 @@ public class INatIngestionService : IINatIngestionService
         _configuration = configuration;
     }
 
-    public async Task ProcessQueueAsync()
+    public async Task<int> ProcessQueueAsync()
     {
         const int batchSize = 10;
         var daysAgo = _configuration.GetValue<int>("iNatIngestor:DaysAgo", 180);
@@ -42,7 +42,7 @@ public class INatIngestionService : IINatIngestionService
         var queueItems = await _dbContext.IngestionQueue
             .Where(i => i.Source == "inat" &&
                        (i.Status == IngestionStatus.Queued || i.Status == IngestionStatus.Failed) &&
-                       i.AttemptCount < 10)
+                       i.AttemptCount < IngestionQueue.MaxAttempts)
             .OrderBy(i => i.LastAttemptUtc)
             .Take(batchSize)
             .ToListAsync();
@@ -50,8 +50,10 @@ public class INatIngestionService : IINatIngestionService
         if (!queueItems.Any())
         {
             _logger.LogInformation("No iNat regions in the queue to process.");
-            return;
+            return 0;
         }
+
+        var saved = 0;
 
         // Lock items
         foreach (var item in queueItems)
@@ -129,6 +131,7 @@ public class INatIngestionService : IINatIngestionService
 
                 item.Status = IngestionStatus.Completed;
                 _logger.LogInformation("Region {RegionCode} done. {Count} observations ingested.", item.RegionCode, totalIngested);
+                saved += totalIngested;
             }
             catch (Exception ex)
             {
@@ -141,7 +144,8 @@ public class INatIngestionService : IINatIngestionService
             }
         }
 
-        _logger.LogInformation("iNat ingestion batch complete.");
+        _logger.LogInformation("iNat ingestion batch complete: {Saved} new observations.", saved);
+        return saved;
     }
 
     private async Task<Country> GetOrCreateCountryAsync(string countryCode)

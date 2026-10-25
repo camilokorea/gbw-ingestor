@@ -50,8 +50,8 @@ public class Program
             var ingestionService = services.GetRequiredService<IIngestionService>();
             if (!processedQueue)
                 await seeder.SeedQueueAsync();
-            await ingestionService.ProcessQueueAsync();
-            await telemetry.CompleteAsync(runId);
+            var saved = await ingestionService.ProcessQueueAsync();
+            await telemetry.CompleteAsync(runId, saved);
         }
         catch (Exception ex)
         {

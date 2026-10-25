@@ -42,8 +42,8 @@ public class Program
             if (!processedQueue)
                 await seeder.SeedQueueAsync();
 
-            await ingestionService.ProcessQueueAsync();
-            await telemetry.CompleteAsync(runId);
+            var saved = await ingestionService.ProcessQueueAsync();
+            await telemetry.CompleteAsync(runId, saved);
             Console.WriteLine("iNat Ingestor Worker completed successfully.");
         }
         catch (Exception ex)
