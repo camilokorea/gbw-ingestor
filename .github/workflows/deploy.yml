@@ -40,6 +40,7 @@ jobs:
         name: test-results
         path: '**/TestResults/*.trx'
         if-no-files-found: ignore
+        retention-days: 1
 
     # ── eBird Ingestor ──────────────────────────────────────────
     - name: Publish eBird Ingestor
@@ -69,6 +70,7 @@ jobs:
       with:
         name: ebird-ingestor-app
         path: publish/ebird
+        retention-days: 1
 
     # ── Sound Ingestor ──────────────────────────────────────────
     - name: Publish Sound Ingestor
@@ -100,6 +102,7 @@ jobs:
       with:
         name: sound-ingestor-app
         path: publish/sound
+        retention-days: 1
 
     # ── Flickr Synch ────────────────────────────────────────────
     - name: Publish Flickr Synch
@@ -128,6 +131,7 @@ jobs:
       with:
         name: flickr-synch-app
         path: publish/flickr-synch
+        retention-days: 1
 
     # ── Flickr Eraser ───────────────────────────────────────────
     - name: Publish Flickr Eraser
@@ -152,6 +156,7 @@ jobs:
       with:
         name: flickr-eraser-app
         path: publish/flickr-eraser
+        retention-days: 1
 
     # ── Flickr Geo ──────────────────────────────────────────────
     - name: Publish Flickr Geo
@@ -180,6 +185,7 @@ jobs:
       with:
         name: flickr-geo-app
         path: publish/flickr-geo
+        retention-days: 1
 
     # ── Flickr Matcher ──────────────────────────────────────────
     - name: Publish Flickr Matcher
@@ -204,6 +210,7 @@ jobs:
       with:
         name: flickr-matcher-app
         path: publish/flickr-matcher
+        retention-days: 1
 
     # ── iNat Ingestor ───────────────────────────────────────────
     - name: Publish iNat Ingestor
@@ -228,6 +235,7 @@ jobs:
       with:
         name: inat-ingestor-app
         path: publish/inat-ingestor
+        retention-days: 1
     # ── iNat Photo ──────────────────────────────────────────────
     - name: Publish iNat Photo Worker
       run: dotnet publish src/INat.Photo.Worker/INat.Photo.Worker.csproj --configuration Release --no-build --output publish/inat-photo
@@ -252,6 +260,7 @@ jobs:
       with:
         name: inat-photo-app
         path: publish/inat-photo
+        retention-days: 1
 
     # ── Commons Photo ──────────────────────────────────────────────
     - name: Publish Commons Photo Worker
@@ -277,6 +286,7 @@ jobs:
       with:
         name: commons-photo-app
         path: publish/commons-photo
+        retention-days: 1
 
   # ─────────────────────────────────────────────────────────────
   # DEPLOY — eBird Ingestor

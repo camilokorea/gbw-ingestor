@@ -7,15 +7,32 @@ using Polly.Extensions.Http;
 
 namespace eBird.Ingestor.Infrastructure.Services;
 
+/// <summary>
+/// eBird API v2. Calls are paced (one at a time, at least <see cref="MinInterval"/> apart, across every client in the
+/// process) and a 429 is retried after Retry-After or a growing wait: unpaced bursts of location lookups drew 429s,
+/// which failed whole regions on every run until they used up their attempts (June 2026).
+/// </summary>
 public class EbirdApiClient : IEbirdApiClient
 {
+    private static readonly SemaphoreSlim Gate = new(1, 1);
+    private static DateTime _lastCall = DateTime.MinValue;
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
+
+    /// <summary>Minimum gap between two eBird calls (eBirdApi:MinIntervalMs, default 1000).</summary>
+    public TimeSpan MinInterval { get; set; }
+    /// <summary>Wait before the first retry of a 429 without Retry-After; doubles each time (eBirdApi:RateLimitBackoffSeconds, default 15).</summary>
+    public TimeSpan RateLimitBackoff { get; set; }
+    /// <summary>Retries of a 429 or a transient server error before giving up on the call.</summary>
+    public int MaxRetries { get; set; } = 5;
 
     public EbirdApiClient(IHttpClientFactory httpClientFactory, IConfiguration configuration)
     {
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
+        MinInterval = TimeSpan.FromMilliseconds(configuration.GetValue("eBirdApi:MinIntervalMs", 1000));
+        RateLimitBackoff = TimeSpan.FromSeconds(configuration.GetValue("eBirdApi:RateLimitBackoffSeconds", 15));
     }
 
     public async Task<IEnumerable<EbirdObservationDto>> GetRecentObservationsAsync(string regionCode)
@@ -31,8 +48,7 @@ public class EbirdApiClient : IEbirdApiClient
 
         var url = $"https://api.ebird.org/v2/data/obs/{regionCode}/recent";
 
-        var policy = GetRetryPolicy();
-        var response = await policy.ExecuteAsync(() => client.GetAsync(url));
+        var response = await SendAsync(client, url);
 
         response.EnsureSuccessStatusCode();
 
@@ -49,8 +65,7 @@ public class EbirdApiClient : IEbirdApiClient
         client.DefaultRequestHeaders.Add("X-eBirdApiToken", apiKey);
 
         var url = $"https://api.ebird.org/v2/ref/location/info/{locId}";
-        var policy = GetRetryPolicy();
-        var response = await policy.ExecuteAsync(() => client.GetAsync(url));
+        var response = await SendAsync(client, url);
 
         response.EnsureSuccessStatusCode();
 
@@ -67,8 +82,7 @@ public class EbirdApiClient : IEbirdApiClient
         client.DefaultRequestHeaders.Add("X-eBirdApiToken", apiKey);
 
         var url = $"https://api.ebird.org/v2/ref/taxonomy/ebird?species={speciesCode}&locale={locale}&fmt=json";
-        var policy = GetRetryPolicy();
-        var response = await policy.ExecuteAsync(() => client.GetAsync(url));
+        var response = await SendAsync(client, url);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -90,11 +104,34 @@ public class EbirdApiClient : IEbirdApiClient
         return null;
     }
 
-    private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+    /// <summary>One paced GET, retried on 429, 5xx and 408 (never on 404: a missing translation stays missing).</summary>
+    private async Task<HttpResponseMessage> SendAsync(HttpClient client, string url)
     {
-        return HttpPolicyExtensions
+        var policy = HttpPolicyExtensions
             .HandleTransientHttpError()
-            .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.NotFound)
-            .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+            .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            .WaitAndRetryAsync(
+                MaxRetries,
+                (attempt, outcome, _) => outcome.Result?.Headers.RetryAfter?.Delta
+                                         ?? (outcome.Result?.StatusCode == System.Net.HttpStatusCode.TooManyRequests
+                                             ? RateLimitBackoff * Math.Pow(2, attempt - 1)
+                                             : TimeSpan.FromSeconds(Math.Pow(2, attempt))),
+                (_, _, _, _) => Task.CompletedTask);
+
+        return await policy.ExecuteAsync(async () =>
+        {
+            await Gate.WaitAsync();
+            try
+            {
+                var wait = _lastCall + MinInterval - DateTime.UtcNow;
+                if (wait > TimeSpan.Zero) await Task.Delay(wait);
+                _lastCall = DateTime.UtcNow;
+            }
+            finally
+            {
+                Gate.Release();
+            }
+            return await client.GetAsync(url);
+        });
     }
 }

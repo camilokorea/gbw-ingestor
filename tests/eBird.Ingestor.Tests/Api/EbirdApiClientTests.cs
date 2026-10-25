@@ -102,16 +102,40 @@ public class EbirdApiClientTests
     }
 
     [Fact]
-    public async Task DoesNotRetryARateLimitedResponseAndSurfacesItToTheCaller()
+    public async Task RetriesARateLimitedResponseAndRecovers()
     {
-        // 429 is not in Polly's transient set here, so it goes straight to the caller. That is
-        // survivable — the ingestion loop marks the region Failed and the timer retries it — but
-        // it means a throttled run makes no progress at all for that region.
+        // A 429 used to fail the whole region at once; on a 6-hourly timer a region then used up its 10 attempts in
+        // two and a half days, which is how 13 regions froze the queue in June 2026.
         var handler = new StubHttpMessageHandler()
-            .AlwaysRespondWith(HttpStatusCode.TooManyRequests, "rate limited");
+            .RespondWith(HttpStatusCode.TooManyRequests, "rate limited")
+            .RespondWith(HttpStatusCode.TooManyRequests, "rate limited")
+            .RespondWith(HttpStatusCode.OK, Fixture.Load("ebird-recent-observations.json"));
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => ClientFor(handler).GetRecentObservationsAsync("CR"));
-        Assert.Equal(1, handler.RequestCount);
+        var observations = await ClientFor(handler).GetRecentObservationsAsync("CR");
+
+        Assert.Equal(2, observations.Count());
+        Assert.Equal(3, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task GivesUpOnPersistentRateLimitingAfterItsRetries()
+    {
+        var handler = new StubHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.TooManyRequests, "rate limited");
+        var client = ClientFor(handler);
+        client.MaxRetries = 2;
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.GetRecentObservationsAsync("CR"));
+        Assert.Equal(3, handler.RequestCount);
+    }
+
+    [Fact]
+    public void PacingAndBackoffComeFromConfiguration()
+    {
+        var client = new EbirdApiClient(new StubHttpClientFactory(new StubHttpMessageHandler()), TestConfiguration.With(
+            ("eBirdApi:ApiKey", "k"), ("eBirdApi:MinIntervalMs", "250"), ("eBirdApi:RateLimitBackoffSeconds", "30")));
+
+        Assert.Equal(TimeSpan.FromMilliseconds(250), client.MinInterval);
+        Assert.Equal(TimeSpan.FromSeconds(30), client.RateLimitBackoff);
     }
 
     [Fact]
@@ -129,20 +153,21 @@ public class EbirdApiClientTests
     }
 
     [Fact]
-    [Trait("Category", "Slow")]
-    public async Task Documents_AMissingTranslationCostsFourRequestsAndFourteenSecondsOfBackoff()
+    public async Task AMissingTranslationIsNotRetried()
     {
-        // The retry policy treats 404 as transient, so every species eBird has no translation for
-        // burns four requests and ~14s of backoff per locale, on every new species. It does return
-        // null in the end, which is why nothing has ever surfaced this.
+        // 404 used to count as transient: four requests and ~14 s of backoff per locale on every new species.
         var handler = new StubHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.NotFound, "");
 
         var name = await ClientFor(handler).GetSpeciesLocalizedNameAsync("rambto1", "fr");
 
         Assert.Null(name);
-        Assert.Equal(4, handler.RequestCount);
+        Assert.Equal(1, handler.RequestCount);
     }
 
     private static EbirdApiClient ClientFor(StubHttpMessageHandler handler) =>
-        new(new StubHttpClientFactory(handler), TestConfiguration.With(("eBirdApi:ApiKey", "test-key")));
+        new(new StubHttpClientFactory(handler), TestConfiguration.With(("eBirdApi:ApiKey", "test-key")))
+        {
+            MinInterval = TimeSpan.Zero,
+            RateLimitBackoff = TimeSpan.Zero,
+        };
 }
