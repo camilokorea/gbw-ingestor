@@ -91,11 +91,23 @@ public class IngestionService : IIngestionService
     /// eBird's historic endpoint, day by day: fills a gap the recent endpoint (at most 30 days back) cannot reach,
     /// like the four months the queue was frozen in 2026. One call per region and day; each finished day is recorded
     /// in SyncStates ("ebird-historic:yyyyMMdd"), so a stopped run resumes where it left off. A region that keeps
-    /// failing on a day is retried twice, then logged and left out of that day.
+    /// failing on a day is retried twice, then left out of that day and recorded ("ebird-historic-missing:…") for
+    /// <see cref="BackfillMissingAsync"/>.
     /// </summary>
+    /// <remarks>
+    /// The run also keeps, for the admin: its range ("ebird-historic:from"/"…:to", yyyyMMdd), a heartbeat
+    /// ("ebird-historic:active", touched after each region and removed at the end; the regular eBird run stands aside
+    /// while it is fresh, as both share the API key) and the regions split into states or counties
+    /// ("ebird-historic-split:{region}", 1 or 2 levels down).
+    /// </remarks>
     public async Task<int> BackfillHistoricAsync(IReadOnlyList<string> regions, DateOnly from, DateOnly to,
         CancellationToken cancellationToken = default)
     {
+        await SetStateAsync(FromKey, long.Parse($"{from:yyyyMMdd}"));
+        await SetStateAsync(ToKey, long.Parse($"{to:yyyyMMdd}"));
+        await SetStateAsync(ActiveKey, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
         var saved = 0;
         for (var day = from; day <= to; day = day.AddDays(1))
         {
@@ -115,6 +127,7 @@ public class IngestionService : IIngestionService
                         var country = await GetOrCreateCountryAsync(region);
                         var observations = await FetchHistoricAsync(region, day);
                         daySaved += await SaveObservationsAsync(observations, country);
+                        await SetStateAsync(ActiveKey, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
                         await _dbContext.SaveChangesAsync(cancellationToken);
                         // Saved: let go of the region's entities, so the next save doesn't walk the whole run.
                         _dbContext.ChangeTracker.Clear();
@@ -131,12 +144,80 @@ public class IngestionService : IIngestionService
 
             if (pending.Count > 0)
                 _logger.LogWarning("Historic {Day:yyyy-MM-dd}: left out {Count} regions: {Regions}", day, pending.Count, string.Join(" ", pending));
+            foreach (var region in pending) await SetStateAsync(MissingKey(day, region), 0);
             _dbContext.SyncStates.Add(new SyncState { Key = key, LastSyncValue = daySaved, UpdatedAt = DateTime.UtcNow });
             await _dbContext.SaveChangesAsync(cancellationToken);
             saved += daySaved;
             _logger.LogInformation("Historic {Day:yyyy-MM-dd}: {Saved} new observations.", day, daySaved);
         }
+
+        await RemoveStateAsync(ActiveKey);
+        await _dbContext.SaveChangesAsync(cancellationToken);
         return saved;
+    }
+
+    /// <summary>
+    /// Retries the regions a backfill left out ("ebird-historic-missing:yyyyMMdd:REGION"), one region and day at a
+    /// time; each one that now saves is cleared and its observations added to that day's count.
+    /// </summary>
+    public async Task<int> BackfillMissingAsync(CancellationToken cancellationToken = default)
+    {
+        var missing = await _dbContext.SyncStates.AsNoTracking()
+            .Where(s => s.Key.StartsWith(MissingPrefix))
+            .Select(s => s.Key)
+            .ToListAsync(cancellationToken);
+
+        var saved = 0;
+        foreach (var key in missing.Order())
+        {
+            var parts = key[MissingPrefix.Length..].Split(':');
+            var day = DateOnly.ParseExact(parts[0], "yyyyMMdd");
+            var region = parts[1];
+            try
+            {
+                var country = await GetOrCreateCountryAsync(region);
+                var regionSaved = await SaveObservationsAsync(await FetchHistoricAsync(region, day), country);
+                await RemoveStateAsync(key);
+                var dayState = await _dbContext.SyncStates.FirstOrDefaultAsync(s => s.Key == $"ebird-historic:{day:yyyyMMdd}", cancellationToken);
+                if (dayState is not null) dayState.LastSyncValue += regionSaved;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                _dbContext.ChangeTracker.Clear();
+                saved += regionSaved;
+                _logger.LogInformation("Historic {Region} {Day:yyyy-MM-dd}: recovered, {Saved} new observations.", region, day, regionSaved);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning("Historic {Region} {Day:yyyy-MM-dd} still failing: {Message}", region, day, ex.Message);
+                DiscardPendingChanges();
+            }
+        }
+        return saved;
+    }
+
+    /// <summary>Whether a historic backfill touched its heartbeat within <paramref name="freshFor"/>.</summary>
+    public async Task<bool> IsHistoricBackfillActiveAsync(TimeSpan freshFor)
+    {
+        var heartbeat = await _dbContext.SyncStates.AsNoTracking().FirstOrDefaultAsync(s => s.Key == ActiveKey);
+        return heartbeat is not null && DateTime.UtcNow - heartbeat.UpdatedAt < freshFor;
+    }
+
+    private const string FromKey = "ebird-historic:from", ToKey = "ebird-historic:to", ActiveKey = "ebird-historic:active";
+    private const string MissingPrefix = "ebird-historic-missing:", SplitPrefix = "ebird-historic-split:";
+    private static string MissingKey(DateOnly day, string region) => $"{MissingPrefix}{day:yyyyMMdd}:{region}";
+
+    /// <summary>Adds or updates a SyncState row (saved with the next SaveChanges).</summary>
+    private async Task SetStateAsync(string key, long value)
+    {
+        var state = _dbContext.SyncStates.Local.FirstOrDefault(s => s.Key == key)
+                    ?? await _dbContext.SyncStates.FirstOrDefaultAsync(s => s.Key == key);
+        if (state is null) _dbContext.SyncStates.Add(new SyncState { Key = key, LastSyncValue = value, UpdatedAt = DateTime.UtcNow });
+        else { state.LastSyncValue = value; state.UpdatedAt = DateTime.UtcNow; }
+    }
+
+    private async Task RemoveStateAsync(string key)
+    {
+        var state = await _dbContext.SyncStates.FirstOrDefaultAsync(s => s.Key == key);
+        if (state is not null) _dbContext.SyncStates.Remove(state);
     }
 
     /// <summary>Regions eBird can't serve in one historic call, learned once per run so later days go straight down.</summary>
@@ -156,6 +237,9 @@ public class IngestionService : IIngestionService
             {
                 _logger.LogInformation("Historic {Region}: too large for one call; asking for its subregions.", region);
                 _tooLarge.Add(region);
+                // Saved now: a later failure of this region discards pending changes, and the split is only learned once.
+                await SetStateAsync($"{SplitPrefix}{region}", depth + 1);
+                await _dbContext.SaveChangesAsync();
             }
         }
         if (!_subregions.TryGetValue(region, out var parts))

@@ -123,6 +123,60 @@ public class HistoricBackfillTests
         Assert.Equal(1, await assertions.Species.CountAsync(s => s.SpeciesCode == "newsp1"));
     }
 
+    [Fact]
+    public async Task The_run_records_its_range_the_split_regions_and_the_ones_left_out_and_ends_its_heartbeat()
+    {
+        using var db = TestDatabase.Create();
+        var api = new FakeEbirdApiClient();
+        api.HistoricTooLarge.Add("AU");
+        api.Subregions["AU"] = ["AU-NSW"];
+        api.HistoricFailingRegions.Add("US");
+
+        await Backfill(db, api, ["AU", "US"], Day1, Day1);
+
+        using var assertions = db.NewContext();
+        var states = await assertions.SyncStates.ToDictionaryAsync(s => s.Key, s => s.LastSyncValue);
+        Assert.Equal(20260815, states["ebird-historic:from"]);
+        Assert.Equal(20260815, states["ebird-historic:to"]);
+        Assert.Equal(1, states["ebird-historic-split:AU"]);
+        Assert.True(states.ContainsKey("ebird-historic-missing:20260815:US"));
+        Assert.False(states.ContainsKey("ebird-historic:active")); // finished: the regular run may go again
+    }
+
+    [Fact]
+    public async Task Missing_regions_are_retried_cleared_and_added_to_their_day()
+    {
+        using var db = TestDatabase.Create();
+        var api = new FakeEbirdApiClient();
+        api.HistoricFailingRegions.Add("US");
+        api.HistoricByRegionDay[("CR", Day1)] = [Obs("rambto1", "Ramphastos sulfuratus", "L1", "2026-08-15 07:00")];
+        api.HistoricByRegionDay[("US", Day1)] = [Obs("amerob", "Turdus migratorius", "L9", "2026-08-15 06:00")];
+        await Backfill(db, api, ["US", "CR"], Day1, Day1);
+
+        api.HistoricFailingRegions.Clear();
+        using var context = db.NewContext();
+        var recovered = await new IngestionService(api, context, NullLogger<IngestionService>.Instance).BackfillMissingAsync();
+
+        Assert.Equal(1, recovered);
+        using var assertions = db.NewContext();
+        Assert.False(await assertions.SyncStates.AnyAsync(s => s.Key.StartsWith("ebird-historic-missing:")));
+        Assert.Equal(2, (await assertions.SyncStates.SingleAsync(s => s.Key == "ebird-historic:20260815")).LastSyncValue);
+    }
+
+    [Fact]
+    public async Task The_backfill_counts_as_running_only_while_its_heartbeat_is_fresh()
+    {
+        using var db = TestDatabase.Create();
+        using var context = db.NewContext();
+        var service = new IngestionService(new FakeEbirdApiClient(), context, NullLogger<IngestionService>.Instance);
+
+        Assert.False(await service.IsHistoricBackfillActiveAsync(TimeSpan.FromHours(2)));
+        context.SyncStates.Add(new eBird.Ingestor.Domain.SyncState { Key = "ebird-historic:active", UpdatedAt = DateTime.UtcNow.AddMinutes(-10) });
+        await context.SaveChangesAsync();
+        Assert.True(await service.IsHistoricBackfillActiveAsync(TimeSpan.FromHours(2)));
+        Assert.False(await service.IsHistoricBackfillActiveAsync(TimeSpan.FromMinutes(5)));
+    }
+
     private static async Task<int> Backfill(TestDatabase db, FakeEbirdApiClient api, string[] regions, DateOnly from, DateOnly to)
     {
         using var context = db.NewContext();
