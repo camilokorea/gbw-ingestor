@@ -40,10 +40,21 @@ public sealed class FakeEbirdApiClient : IEbirdApiClient
     /// <summary>Regions whose historic calls always throw (a persistent failure).</summary>
     public HashSet<string> HistoricFailingRegions { get; } = new();
     public List<(string Region, DateOnly Day)> HistoricRequested { get; } = new();
+    /// <summary>Regions eBird can't serve in one historic call (it answers 503 after 60 s).</summary>
+    public HashSet<string> HistoricTooLarge { get; } = new();
+    public Dictionary<string, List<string>> Subregions { get; } = new();
+    public List<string> SubregionsRequested { get; } = new();
+
+    public Task<IReadOnlyList<string>> GetSubregionsAsync(string regionCode)
+    {
+        SubregionsRequested.Add(regionCode);
+        return Task.FromResult<IReadOnlyList<string>>(Subregions.TryGetValue(regionCode, out var list) ? list : []);
+    }
 
     public Task<IEnumerable<EbirdObservationDto>> GetHistoricObservationsAsync(string regionCode, DateOnly date)
     {
         HistoricRequested.Add((regionCode, date));
+        if (HistoricTooLarge.Contains(regionCode)) throw new RegionTooLargeException(regionCode);
         if (HistoricFailingRegions.Contains(regionCode))
         {
             throw new HttpRequestException("Response status code does not indicate success: 429 (Too Many Requests).");

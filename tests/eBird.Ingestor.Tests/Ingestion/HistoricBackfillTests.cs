@@ -80,6 +80,26 @@ public class HistoricBackfillTests
         Assert.Equal(1, await assertions.Observations.CountAsync());
     }
 
+    [Fact]
+    public async Task A_region_too_large_for_one_call_is_fetched_by_state_then_county_and_remembered()
+    {
+        using var db = TestDatabase.Create();
+        var api = new FakeEbirdApiClient();
+        api.HistoricTooLarge.UnionWith(["US", "US-CA"]);
+        api.Subregions["US"] = ["US-CA", "US-OR"];
+        api.Subregions["US-CA"] = ["US-CA-001", "US-CA-003"];
+        api.HistoricByRegionDay[("US-OR", Day1)] = [Obs("stejay", "Cyanocitta stelleri", "L1", "2026-08-15 07:00")];
+        api.HistoricByRegionDay[("US-CA-001", Day1)] = [Obs("calqua", "Callipepla californica", "L2", "2026-08-15 08:00")];
+        api.HistoricByRegionDay[("US-CA-003", Day2)] = [Obs("acowoo", "Melanerpes formicivorus", "L3", "2026-08-16 09:00")];
+
+        var saved = await Backfill(db, api, ["US"], Day1, Day2);
+
+        Assert.Equal(3, saved);
+        // The 60-second refusals happen once: on day 2 the run goes straight to the counties and Oregon.
+        Assert.Equal([("US-CA-001", Day2), ("US-CA-003", Day2), ("US-OR", Day2)], api.HistoricRequested.Where(r => r.Day == Day2));
+        Assert.Equal(["US", "US-CA"], api.SubregionsRequested);
+    }
+
     private static async Task<int> Backfill(TestDatabase db, FakeEbirdApiClient api, string[] regions, DateOnly from, DateOnly to)
     {
         using var context = db.NewContext();
