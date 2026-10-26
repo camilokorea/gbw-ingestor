@@ -58,6 +58,25 @@ public class EbirdApiClient : IEbirdApiClient
         return observations ?? new List<EbirdObservationDto>();
     }
 
+    public async Task<IEnumerable<EbirdObservationDto>> GetHistoricObservationsAsync(string regionCode, DateOnly date)
+    {
+        var apiKey = _configuration["eBirdApi:ApiKey"];
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            throw new InvalidOperationException("La clave de la API de eBird no está configurada en appsettings.json");
+        }
+
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-eBirdApiToken", apiKey);
+
+        var url = $"https://api.ebird.org/v2/data/obs/{regionCode}/historic/{date.Year}/{date.Month}/{date.Day}?detail=full";
+        var response = await SendAsync(client, url);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<List<EbirdObservationDto>>(json) ?? new List<EbirdObservationDto>();
+    }
+
     public async Task<EbirdLocationDetailsDto> GetLocationDetailsAsync(string locId)
     {
         var apiKey = _configuration["eBirdApi:ApiKey"];

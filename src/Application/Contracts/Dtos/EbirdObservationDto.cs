@@ -30,4 +30,13 @@ public class EbirdObservationDto
 
     [JsonPropertyName("lng")]
     public double Lng { get; set; }
+
+    /// <summary>State/province code (e.g. "CR-A"); only in responses requested with detail=full (historic).</summary>
+    [JsonPropertyName("subnational1Code")]
+    public string? StateCode { get; set; }
+
+    /// <summary>State/province name; only with detail=full.</summary>
+    [JsonPropertyName("subnational1Name")]
+    public string? StateName { get; set; }
+
 }

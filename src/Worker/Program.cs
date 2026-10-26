@@ -31,6 +31,29 @@ public class Program
             return;
         }
 
+        // One-off: --backfill-historic --from=2026-06-15 --to=2026-10-24 fills a gap from eBird's historic endpoint,
+        // one call per region and day, resumable (finished days are recorded in SyncStates).
+        if (args.Contains("--backfill-historic"))
+        {
+            static DateOnly Arg(string[] a, string name) =>
+                DateOnly.Parse(a.First(x => x.StartsWith($"--{name}=")).Split('=')[1]);
+            var regions = services.GetRequiredService<IConfiguration>().GetSection("CountriesToSeed").Get<List<string>>() ?? [];
+            var backfillRun = await telemetry.StartAsync("ebird-historic-backfill");
+            try
+            {
+                var saved = await services.GetRequiredService<IIngestionService>()
+                    .BackfillHistoricAsync(regions, Arg(args, "from"), Arg(args, "to"));
+                await telemetry.CompleteAsync(backfillRun, saved);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fatal error in eBird historic backfill: {ex.Message}");
+                await telemetry.FailAsync(backfillRun, ex);
+                Environment.Exit(1);
+            }
+            return;
+        }
+
         var runId = await telemetry.StartAsync("ebird-ingestor");
 
         Console.WriteLine("Host creado. El programa se iniciará.");
