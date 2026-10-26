@@ -113,7 +113,7 @@ public class IngestionService : IIngestionService
                     try
                     {
                         var country = await GetOrCreateCountryAsync(region);
-                        var observations = await _apiClient.GetHistoricObservationsAsync(region, day);
+                        var observations = await FetchHistoricAsync(region, day);
                         daySaved += await SaveObservationsAsync(observations, country);
                         await _dbContext.SaveChangesAsync(cancellationToken);
                     }
@@ -135,6 +135,34 @@ public class IngestionService : IIngestionService
             _logger.LogInformation("Historic {Day:yyyy-MM-dd}: {Saved} new observations.", day, daySaved);
         }
         return saved;
+    }
+
+    /// <summary>Regions eBird can't serve in one historic call, learned once per run so later days go straight down.</summary>
+    private readonly HashSet<string> _tooLarge = new();
+    private readonly Dictionary<string, IReadOnlyList<string>> _subregions = new();
+
+    /// <summary>
+    /// One region's day. When eBird gives up on the region (a whole Australia or California), its states are asked
+    /// for instead, and a state's counties if needed (two levels at most).
+    /// </summary>
+    private async Task<List<EbirdObservationDto>> FetchHistoricAsync(string region, DateOnly day, int depth = 0)
+    {
+        if (!_tooLarge.Contains(region))
+        {
+            try { return (await _apiClient.GetHistoricObservationsAsync(region, day)).ToList(); }
+            catch (RegionTooLargeException) when (depth < 2)
+            {
+                _logger.LogInformation("Historic {Region}: too large for one call; asking for its subregions.", region);
+                _tooLarge.Add(region);
+            }
+        }
+        if (!_subregions.TryGetValue(region, out var parts))
+            _subregions[region] = parts = await _apiClient.GetSubregionsAsync(region);
+        if (parts.Count == 0) throw new RegionTooLargeException(region);
+
+        var all = new List<EbirdObservationDto>();
+        foreach (var part in parts) all.AddRange(await FetchHistoricAsync(part, day, depth + 1));
+        return all;
     }
 
     /// <summary>Adds the observations not stored yet (same location, species and time); returns how many.</summary>

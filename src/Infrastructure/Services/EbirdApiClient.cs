@@ -3,7 +3,6 @@ using eBird.Ingestor.Application.Contracts;
 using eBird.Ingestor.Application.Contracts.Dtos;
 using Microsoft.Extensions.Configuration;
 using Polly;
-using Polly.Extensions.Http;
 
 namespace eBird.Ingestor.Infrastructure.Services;
 
@@ -70,11 +69,26 @@ public class EbirdApiClient : IEbirdApiClient
         client.DefaultRequestHeaders.Add("X-eBirdApiToken", apiKey);
 
         var url = $"https://api.ebird.org/v2/data/obs/{regionCode}/historic/{date.Year}/{date.Month}/{date.Day}?detail=full";
-        var response = await SendAsync(client, url);
+        // A 5xx here is eBird timing out on a big region (always at 60 s), not a blip: retrying only waits longer.
+        var response = await SendAsync(client, url, retryServerErrors: false);
+        if ((int)response.StatusCode >= 500) throw new RegionTooLargeException(regionCode);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<List<EbirdObservationDto>>(json) ?? new List<EbirdObservationDto>();
+    }
+
+    public async Task<IReadOnlyList<string>> GetSubregionsAsync(string regionCode)
+    {
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-eBirdApiToken", _configuration["eBirdApi:ApiKey"]);
+
+        var level = regionCode.Contains('-') ? "subnational2" : "subnational1";
+        var response = await SendAsync(client, $"https://api.ebird.org/v2/ref/region/list/{level}/{regionCode}");
+        response.EnsureSuccessStatusCode();
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return doc.RootElement.EnumerateArray().Select(r => r.GetProperty("code").GetString()!).ToList();
     }
 
     public async Task<EbirdLocationDetailsDto> GetLocationDetailsAsync(string locId)
@@ -123,12 +137,14 @@ public class EbirdApiClient : IEbirdApiClient
         return null;
     }
 
-    /// <summary>One paced GET, retried on 429, 5xx and 408 (never on 404: a missing translation stays missing).</summary>
-    private async Task<HttpResponseMessage> SendAsync(HttpClient client, string url)
+    /// <summary>One paced GET, retried on 429, and on 5xx and 408 unless told not to (never on 404: a missing
+    /// translation stays missing).</summary>
+    private async Task<HttpResponseMessage> SendAsync(HttpClient client, string url, bool retryServerErrors = true)
     {
-        var policy = HttpPolicyExtensions
-            .HandleTransientHttpError()
-            .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        var policy = Policy<HttpResponseMessage>
+            .Handle<HttpRequestException>(_ => retryServerErrors)
+            .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests
+                             || (retryServerErrors && ((int)msg.StatusCode >= 500 || msg.StatusCode == System.Net.HttpStatusCode.RequestTimeout)))
             .WaitAndRetryAsync(
                 MaxRetries,
                 (attempt, outcome, _) => outcome.Result?.Headers.RetryAfter?.Delta
