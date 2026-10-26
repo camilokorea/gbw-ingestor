@@ -36,6 +36,23 @@ public sealed class FakeEbirdApiClient : IEbirdApiClient
         return Task.FromResult<IEnumerable<EbirdObservationDto>>(observations);
     }
 
+    public Dictionary<(string Region, DateOnly Day), List<EbirdObservationDto>> HistoricByRegionDay { get; } = new();
+    /// <summary>Regions whose historic calls always throw (a persistent failure).</summary>
+    public HashSet<string> HistoricFailingRegions { get; } = new();
+    public List<(string Region, DateOnly Day)> HistoricRequested { get; } = new();
+
+    public Task<IEnumerable<EbirdObservationDto>> GetHistoricObservationsAsync(string regionCode, DateOnly date)
+    {
+        HistoricRequested.Add((regionCode, date));
+        if (HistoricFailingRegions.Contains(regionCode))
+        {
+            throw new HttpRequestException("Response status code does not indicate success: 429 (Too Many Requests).");
+        }
+
+        return Task.FromResult<IEnumerable<EbirdObservationDto>>(
+            HistoricByRegionDay.TryGetValue((regionCode, date), out var list) ? list : new List<EbirdObservationDto>());
+    }
+
     public Task<EbirdLocationDetailsDto> GetLocationDetailsAsync(string locId)
     {
         LocationsRequested.Add(locId);

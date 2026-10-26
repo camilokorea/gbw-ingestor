@@ -67,29 +67,7 @@ public class IngestionService : IIngestionService
                     continue;
                 }
 
-                foreach (var dto in observationsDto)
-                {
-                    var location = await GetOrCreateLocationAsync(dto, country);
-                    var species = await GetOrCreateSpeciesAsync(dto);
-
-                    var observationExists = await _dbContext.Observations.AnyAsync(o =>
-                        o.LocationId == location.Id &&
-                        o.SpeciesId == species.Id &&
-                        o.ObservationDate == DateTime.Parse(dto.ObsDt));
-
-                    if (!observationExists)
-                    {
-                        var observation = new Observation
-                        {
-                            HowMany = dto.HowMany,
-                            ObservationDate = DateTime.Parse(dto.ObsDt),
-                            Location = location,
-                            Species = species
-                        };
-                        _dbContext.Observations.Add(observation);
-                        saved++;
-                    }
-                }
+                saved += await SaveObservationsAsync(observationsDto, country);
 
                 item.Status = IngestionStatus.Completed;
                 _logger.LogInformation("Región {RegionCode} procesada y datos guardados exitosamente.", item.RegionCode);
@@ -107,6 +85,90 @@ public class IngestionService : IIngestionService
 
         _logger.LogInformation("Proceso de ingestión finalizado: {Saved} observaciones nuevas.", saved);
         return saved;
+    }
+
+    /// <summary>
+    /// eBird's historic endpoint, day by day: fills a gap the recent endpoint (at most 30 days back) cannot reach,
+    /// like the four months the queue was frozen in 2026. One call per region and day; each finished day is recorded
+    /// in SyncStates ("ebird-historic:yyyyMMdd"), so a stopped run resumes where it left off. A region that keeps
+    /// failing on a day is retried twice, then logged and left out of that day.
+    /// </summary>
+    public async Task<int> BackfillHistoricAsync(IReadOnlyList<string> regions, DateOnly from, DateOnly to,
+        CancellationToken cancellationToken = default)
+    {
+        var saved = 0;
+        for (var day = from; day <= to; day = day.AddDays(1))
+        {
+            var key = $"ebird-historic:{day:yyyyMMdd}";
+            if (await _dbContext.SyncStates.AnyAsync(x => x.Key == key, cancellationToken)) continue;
+
+            var pending = regions.ToList();
+            var daySaved = 0;
+            for (var pass = 0; pass < 3 && pending.Count > 0; pass++)
+            {
+                var failed = new List<string>();
+                foreach (var region in pending)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    try
+                    {
+                        var country = await GetOrCreateCountryAsync(region);
+                        var observations = await _apiClient.GetHistoricObservationsAsync(region, day);
+                        daySaved += await SaveObservationsAsync(observations, country);
+                        await _dbContext.SaveChangesAsync(cancellationToken);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        _logger.LogWarning("Historic {Region} {Day:yyyy-MM-dd} failed: {Message}", region, day, ex.Message);
+                        DiscardPendingChanges();
+                        failed.Add(region);
+                    }
+                }
+                pending = failed;
+            }
+
+            if (pending.Count > 0)
+                _logger.LogWarning("Historic {Day:yyyy-MM-dd}: left out {Count} regions: {Regions}", day, pending.Count, string.Join(" ", pending));
+            _dbContext.SyncStates.Add(new SyncState { Key = key, LastSyncValue = daySaved, UpdatedAt = DateTime.UtcNow });
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            saved += daySaved;
+            _logger.LogInformation("Historic {Day:yyyy-MM-dd}: {Saved} new observations.", day, daySaved);
+        }
+        return saved;
+    }
+
+    /// <summary>Adds the observations not stored yet (same location, species and time); returns how many.</summary>
+    private async Task<int> SaveObservationsAsync(IEnumerable<EbirdObservationDto> observations, Country country)
+    {
+        var saved = 0;
+        foreach (var dto in observations)
+        {
+            var location = await GetOrCreateLocationAsync(dto, country);
+            var species = await GetOrCreateSpeciesAsync(dto);
+            var observedAt = DateTime.Parse(dto.ObsDt);
+
+            var exists = _dbContext.Observations.Local.Any(o =>
+                             o.LocationId == location.Id && o.SpeciesId == species.Id && o.ObservationDate == observedAt)
+                         || await _dbContext.Observations.AnyAsync(o =>
+                             o.LocationId == location.Id && o.SpeciesId == species.Id && o.ObservationDate == observedAt);
+            if (exists) continue;
+
+            _dbContext.Observations.Add(new Observation
+            {
+                HowMany = dto.HowMany,
+                ObservationDate = observedAt,
+                Location = location,
+                Species = species
+            });
+            saved++;
+        }
+        return saved;
+    }
+
+    /// <summary>After a failed region, drop what it half-added so the next save doesn't carry it.</summary>
+    private void DiscardPendingChanges()
+    {
+        if (_dbContext is Microsoft.EntityFrameworkCore.DbContext context) context.ChangeTracker.Clear();
     }
 
     private async Task<Country> GetOrCreateCountryAsync(string countryCode)
@@ -151,7 +213,10 @@ public class IngestionService : IIngestionService
         var location = await _dbContext.Locations.FindAsync(dto.LocId);
         if (location == null)
         {
-            var details = await _apiClient.GetLocationDetailsAsync(dto.LocId);
+            // Historic (detail=full) rows carry their state; only the recent endpoint needs a lookup per new site.
+            var details = dto.StateCode is { Length: > 0 }
+                ? new EbirdLocationDetailsDto { StateCode = dto.StateCode, StateName = dto.StateName }
+                : await _apiClient.GetLocationDetailsAsync(dto.LocId);
             var state = await GetOrCreateStateAsync(details, country);
 
             location = new Location
