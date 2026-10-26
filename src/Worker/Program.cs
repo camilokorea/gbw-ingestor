@@ -33,6 +33,23 @@ public class Program
 
         // One-off: --backfill-historic --from=2026-06-15 --to=2026-10-24 fills a gap from eBird's historic endpoint,
         // one call per region and day, resumable (finished days are recorded in SyncStates).
+        // --backfill-missing retries the regions a backfill left out (eBird refused them all three passes).
+        if (args.Contains("--backfill-missing"))
+        {
+            var missingRun = await telemetry.StartAsync("ebird-historic-backfill");
+            try
+            {
+                await telemetry.CompleteAsync(missingRun, await services.GetRequiredService<IIngestionService>().BackfillMissingAsync());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fatal error retrying the backfill's missing regions: {ex.Message}");
+                await telemetry.FailAsync(missingRun, ex);
+                Environment.Exit(1);
+            }
+            return;
+        }
+
         if (args.Contains("--backfill-historic"))
         {
             static DateOnly Arg(string[] a, string name) =>
@@ -51,6 +68,14 @@ public class Program
                 await telemetry.FailAsync(backfillRun, ex);
                 Environment.Exit(1);
             }
+            return;
+        }
+
+        // A historic backfill uses the same eBird key; running both drew 429s that failed queue regions (Oct 2026).
+        // Its heartbeat is touched after every region, so two hours without one means it stopped.
+        if (await services.GetRequiredService<IIngestionService>().IsHistoricBackfillActiveAsync(TimeSpan.FromHours(2)))
+        {
+            Console.WriteLine("A historic eBird backfill is running; skipping this run so they don't share the rate limit.");
             return;
         }
 
