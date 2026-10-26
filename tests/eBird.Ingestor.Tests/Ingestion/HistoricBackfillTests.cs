@@ -100,6 +100,29 @@ public class HistoricBackfillTests
         Assert.Equal(["US", "US-CA"], api.SubregionsRequested);
     }
 
+    [Fact]
+    public async Task Each_region_is_released_after_saving_and_a_second_day_still_finds_what_the_first_stored()
+    {
+        using var db = TestDatabase.Create();
+        var api = new FakeEbirdApiClient();
+        // Same site and species on two days, plus a species new to the run seen twice on one day.
+        api.HistoricByRegionDay[("CR", Day1)] = [Obs("rambto1", "Ramphastos sulfuratus", "L1", "2026-08-15 07:00"),
+                                                 Obs("newsp1", "Avis nova", "L1", "2026-08-15 07:00"),
+                                                 Obs("newsp1", "Avis nova", "L1", "2026-08-15 07:00")];
+        api.HistoricByRegionDay[("CR", Day2)] = [Obs("rambto1", "Ramphastos sulfuratus", "L1", "2026-08-15 07:00"),
+                                                 Obs("rambto1", "Ramphastos sulfuratus", "L1", "2026-08-16 07:00")];
+
+        using var context = db.NewContext();
+        var saved = await new IngestionService(api, context, NullLogger<IngestionService>.Instance)
+            .BackfillHistoricAsync(["CR"], Day1, Day2);
+
+        Assert.Equal(3, saved); // toucan day 1, new species once, toucan day 2; the repeat of day 1 is skipped
+        Assert.Empty(context.ChangeTracker.Entries<eBird.Ingestor.Domain.Observation>());
+        using var assertions = db.NewContext();
+        Assert.Equal(3, await assertions.Observations.CountAsync());
+        Assert.Equal(1, await assertions.Species.CountAsync(s => s.SpeciesCode == "newsp1"));
+    }
+
     private static async Task<int> Backfill(TestDatabase db, FakeEbirdApiClient api, string[] regions, DateOnly from, DateOnly to)
     {
         using var context = db.NewContext();

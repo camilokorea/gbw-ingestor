@@ -116,6 +116,8 @@ public class IngestionService : IIngestionService
                         var observations = await FetchHistoricAsync(region, day);
                         daySaved += await SaveObservationsAsync(observations, country);
                         await _dbContext.SaveChangesAsync(cancellationToken);
+                        // Saved: let go of the region's entities, so the next save doesn't walk the whole run.
+                        _dbContext.ChangeTracker.Clear();
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
@@ -166,20 +168,23 @@ public class IngestionService : IIngestionService
     }
 
     /// <summary>Adds the observations not stored yet (same location, species and time); returns how many.</summary>
+    /// <remarks>Duplicates within the batch are caught by a set keyed on the species code (a new species has no id
+    /// yet), not by scanning the tracked observations: that scan grew with every observation of the run and made the
+    /// historic backfill quadratic (7 hours for its second day).</remarks>
     private async Task<int> SaveObservationsAsync(IEnumerable<EbirdObservationDto> observations, Country country)
     {
         var saved = 0;
+        var added = new HashSet<(string LocationId, string SpeciesCode, DateTime At)>();
         foreach (var dto in observations)
         {
             var location = await GetOrCreateLocationAsync(dto, country);
             var species = await GetOrCreateSpeciesAsync(dto);
             var observedAt = DateTime.Parse(dto.ObsDt);
 
-            var exists = _dbContext.Observations.Local.Any(o =>
-                             o.LocationId == location.Id && o.SpeciesId == species.Id && o.ObservationDate == observedAt)
-                         || await _dbContext.Observations.AnyAsync(o =>
-                             o.LocationId == location.Id && o.SpeciesId == species.Id && o.ObservationDate == observedAt);
-            if (exists) continue;
+            if (!added.Add((location.Id, species.SpeciesCode, observedAt))) continue;
+            if (species.Id != 0 && await _dbContext.Observations.AnyAsync(o =>
+                    o.LocationId == location.Id && o.SpeciesId == species.Id && o.ObservationDate == observedAt))
+                continue;
 
             _dbContext.Observations.Add(new Observation
             {
